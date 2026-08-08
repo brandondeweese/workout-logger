@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iron Log</title>
+<style>
+  :root{
+    --bg: #121212;
+    --text: #E9E7E2;
+    --muted: #8B8880;
+    --line: rgba(255,255,255,0.09);
+    --accent: #7DA39C;
+    --accent-dim: #4F6B66;
+    --danger: #B5735F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    font-size:17px;
+    line-height:1.4;
+  }
+  html{width:100%;overflow-x:hidden;}
+  .wrap{max-width:600px;margin:0 auto;padding:32px 20px 70px;width:100%;}
+  header{
+    margin-bottom:26px;
+    display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  }
+  h1{
+    font-weight:650;
+    font-size:29px;
+    letter-spacing:0.1px;
+    margin:0 0 5px;
+  }
+  .tag{font-size:14px;color:var(--muted);}
+  .tabs{display:flex;gap:26px;margin-bottom:26px;border-bottom:1px solid var(--line);}
+  .tab{
+    padding:0 0 12px;
+    font-weight:550;font-size:16px;
+    color:var(--muted);cursor:pointer;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+  select{
+    width:100%;padding:6px 22px 6px 0;margin-bottom:4px;
+    background:transparent;color:var(--text);
+    border:none;outline:none;box-shadow:none;
+    border-radius:0;font-size:14.5px;font-weight:300;
+    max-width:100%;
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M0 0l5.5 7 5.5-7z' fill='%238B8880'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 4px center;
+  }
+  select:focus{outline:none;box-shadow:none;}
+  select::-ms-expand{display:none;}
+  .select-label{
+    font-size:11px;letter-spacing:0.6px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:4px;
+  }
+  #phaseSelect{
+    color:var(--accent);
+  }
+  #daySelect{
+    color:var(--text);
+    margin-bottom:14px;
+  }
+  .select-group{margin-bottom:6px;}
+  .exercise{
+    padding:10px 0;max-width:100%;
+    border-radius:8px;transition:background .2s ease;
+  }
+  .exercise.complete{background:rgba(125,163,156,0.10);}
+  .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .ex-name{font-weight:300;font-size:20px;overflow-wrap:break-word;}
+  #exercises{margin-top:22px;}
+  .ex-target{font-size:14px;color:var(--muted);margin-top:3px;}
+  .ex-right{display:flex;align-items:center;gap:8px;}
+  .tally{font-size:13.5px;color:var(--muted);white-space:nowrap;}
+  .chevron{font-size:12px;color:var(--muted);transition:transform .18s ease;display:inline-block;}
+  .exercise.collapsed .chevron{transform:rotate(-90deg);}
+  .ex-rows{overflow:hidden;max-height:1200px;transition:max-height .22s ease;margin-top:12px;}
+  .exercise.collapsed .ex-rows{max-height:0;margin-top:0;}
+  .ex-subtabs{display:flex;gap:16px;margin-bottom:10px;}
+  .ex-subtab{font-size:13px;color:var(--muted);cursor:pointer;padding-bottom:4px;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;}
+  .ex-subtab.active{color:var(--text);border-bottom-color:var(--accent);}
+  .ex-panel{display:none;}
+  .ex-panel.active{display:block;}
+  .prog-row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:6px 0;border-bottom:1px solid var(--line);}
+  .prog-row:last-child{border-bottom:none;}
+  .prog-row .prog-date{color:var(--muted);flex:0 0 auto;}
+  .prog-row .prog-sets{text-align:right;color:var(--text);}
+  .prog-empty{font-size:13.5px;color:var(--muted);padding:6px 0;}
+  .setrow{display:flex;gap:8px;align-items:center;margin-top:10px;}
+  .set-headers{display:flex;gap:8px;align-items:center;margin-top:14px;}
+  .set-headers .sh{font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:center;}
+  .set-headers .sh-set{width:36px;flex:0 0 36px;}
+  .set-headers .sh-field{flex:1 1 0;}
+  .set-headers .sh-check{width:34px;flex:0 0 34px;}
+  .set-headers .sh-rm{width:26px;flex:0 0 26px;}
+  .remove-set-btn{
+    width:26px;height:26px;flex:0 0 26px;
+    border:1px solid #333029;border-radius:50%;
+    background:transparent;color:var(--muted);
+    font-size:16px;font-weight:600;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;
+  }
+  .remove-set-btn:active{border-color:#B5735F;color:#B5735F;}
+  .add-set-btn, .dashed-btn{
+    display:block;width:100%;margin-top:10px;padding:10px;
+    background:transparent;border:1px dashed var(--line);border-radius:8px;
+    color:var(--accent);font-size:14px;font-weight:600;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .add-set-btn:active, .dashed-btn:active{border-color:var(--accent);}
+  .field-wrap{flex:1 1 0;min-width:0;position:relative;}
+  .setrow input{
+    width:100%;min-width:0;background:#1E1D19;
+    border:1px solid var(--line);border-radius:999px;
+    color:var(--text);padding:12px 14px;font-size:28px;font-weight:600;
+    text-align:center;
+  }
+  .field-wrap.reps-wrap input{padding-right:44px;}
+  .field-wrap .unit{
+    position:absolute;right:16px;top:50%;transform:translateY(-50%);
+    font-size:13px;color:var(--muted);pointer-events:none;
+  }
+  .setrow input:focus{outline:none;border-color:var(--accent);}
+  .setrow input::placeholder{color:#55524c;font-size:14px;}
+  .setrow select.tag-select{display:none;}
+  .tag-wrap{position:relative;flex:0 0 36px;}
+  .set-tag-btn{
+    width:36px;height:36px;
+    border:1.5px solid #333029;
+    border-radius:50%;
+    background:#1E1D19;
+    color:var(--text);
+    font-size:15px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    padding:0;
+    line-height:1;
+  }
+  .set-tag-btn:active{border-color:var(--accent);}
+  .set-tag-btn[data-tag="warmup"]{border-color:#C9822B;background:rgba(201,130,43,0.12);font-size:17px;}
+  .set-tag-btn[data-tag="dropset"]{border-color:#C9A24B;color:#C9A24B;}
+  .set-tag-btn[data-tag="failure"]{border-color:#B5735F;color:#B5735F;background:rgba(181,115,95,0.12);}
+  .tag-menu{
+    position:absolute;top:24px;left:0;
+    background:#1A1917;
+    border:1px solid #333029;
+    border-radius:6px;
+    z-index:30;
+    display:none;
+    min-width:92px;
+    overflow:hidden;
+  }
+  .tag-menu.open{display:block;}
+  .tag-menu div{
+    padding:8px 12px;
+    font-size:14px;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .tag-menu div:active{background:#242220;}
+  .tag-menu div[data-tag="warmup"]{color:#8B8880;}
+  .tag-menu div[data-tag="dropset"]{color:#C9A24B;}
+  .tag-menu div[data-tag="failure"]{color:#B5735F;}
+  .check-btn{
+    width:34px;height:34px;flex:0 0 34px;
+    border:1.5px solid var(--muted);
+    border-radius:50%;
+    background:#1B1A17;
+    color:transparent;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    padding:0;
+    font-size:17px;
+    font-weight:700;
+    line-height:1;
+  }
+  .check-btn:active{border-color:var(--accent);}
+  .check-btn.checked{
+    border-color:var(--accent);
+    background:var(--accent);
+    color:#121212;
+  }
+  #exercises.locked .check-btn{opacity:0.35;}
+  .prog-tag{font-size:12px;margin-left:3px;}
+  .prog-tag.warmup{color:#8B8880;}
+  .prog-tag.dropset{color:#C9A24B;}
+  .prog-tag.failure{color:#B5735F;}
+  .btn{
+    display:block;width:100%;padding:15px;border:none;border-radius:7px;
+    font-weight:650;font-size:16px;
+    cursor:pointer;margin-top:24px;-webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary{background:var(--accent);color:#0F1211;}
+  .btn-primary:active{background:var(--accent-dim);}
+  .status{text-align:center;font-size:14px;color:var(--muted);margin-top:12px;min-height:18px;}
+  .hist-entry{
+    padding:18px 0;border-bottom:1px solid var(--line);max-width:100%;
+  }
+  .hist-entry:last-child{border-bottom:none;}
+  .hist-top{display:flex;justify-content:space-between;align-items:center;cursor:pointer;flex-wrap:wrap;gap:6px;}
+  .hist-date{font-weight:600;font-size:17px;}
+  .hist-meta{font-size:13.5px;color:var(--muted);}
+  .hist-detail{margin-top:12px;padding-top:2px;display:none;}
+  .hist-detail.open{display:block;}
+  .hist-ex{font-size:15px;margin-bottom:7px;overflow-wrap:break-word;}
+  .hist-ex b{color:var(--text);font-weight:550;}
+  .hist-ex span{color:var(--muted);}
+  .del{color:var(--danger);font-size:13.5px;cursor:pointer;background:none;border:none;padding:8px 0 0;margin-top:2px;-webkit-tap-highlight-color:transparent;}
+  .empty{text-align:center;color:var(--muted);padding:44px 12px;font-size:16px;}
+  #historyView{max-width:100%;}
+
+  .clockbar{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:0 0 24px;margin-bottom:8px;
+  }
+  .clockbar .clock-label{font-size:13.5px;color:var(--muted);}
+  .clockbar .clock-time{font-size:26px;font-weight:600;margin-top:3px;}
+  .clockbar button{
+    background:transparent;color:var(--accent);border:1px solid var(--accent-dim);
+    border-radius:7px;padding:10px 16px;font-weight:550;font-size:14.5px;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .clockbar button.ended{color:var(--muted);border-color:var(--line);}
+
+  .suggestion{font-size:13.5px;color:var(--accent);margin-top:4px;opacity:0.9;}
+
+  .restbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    background:#1A1A1A;border-top:1px solid var(--line);
+    padding:14px 20px;display:flex;align-items:center;gap:12px;
+    transform:translateY(100%);transition:transform .2s ease;
+  }
+  .restbar.visible{transform:translateY(0);}
+  .restbar .rest-time{
+    font-size:24px;font-weight:600;
+    flex:0 0 auto;min-width:64px;
+  }
+  .restbar.flash .rest-time{color:var(--danger);}
+  .restbar .rest-controls{display:flex;gap:16px;flex:1;flex-wrap:wrap;justify-content:flex-end;}
+  .restbar button{
+    background:none;border:none;color:var(--muted);
+    padding:5px 0;font-size:14px;font-weight:550;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .restbar button.primary{color:var(--accent);}
+
+  /* ---- Programs / Library ---- */
+  .text-input, .text-select{
+    width:100%;background:#1E1D19;border:1px solid var(--line);border-radius:8px;
+    color:var(--text);padding:11px 14px;font-size:15px;font-weight:400;
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+  }
+  .text-select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M0 0l5.5 7 5.5-7z' fill='%238B8880'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:32px;
+  }
+  .text-input:focus, .text-select:focus{outline:none;border-color:var(--accent);}
+  .text-input::placeholder{color:#55524c;}
+  .form-label{font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted);margin:16px 0 5px;}
+  .form-label:first-child{margin-top:0;}
+
+  .list-row{padding:16px 0;border-bottom:1px solid var(--line);}
+  .list-row:last-child{border-bottom:none;}
+  .list-row-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .list-row-name{font-weight:300;font-size:18px;overflow-wrap:break-word;}
+  .list-row-meta{font-size:13px;color:var(--muted);margin-top:3px;}
+  .badge-active{
+    font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);
+    border:1px solid var(--accent-dim);border-radius:999px;padding:4px 10px;white-space:nowrap;
+  }
+  .link-btn{
+    background:none;border:none;color:var(--accent);font-size:13.5px;font-weight:600;
+    cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
+  }
+  .link-btn.muted{color:var(--muted);font-weight:500;}
+  .link-btn.danger{color:var(--danger);}
+
+  .check-row{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:14.5px;}
+  .check-row input[type="checkbox"]{width:17px;height:17px;accent-color:var(--accent);flex:0 0 auto;}
+  .check-grid{display:flex;flex-wrap:wrap;gap:0 18px;}
+  .check-grid .check-row{width:auto;}
+
+  .subtabs-row{display:flex;gap:22px;margin:20px 0 18px;border-bottom:1px solid var(--line);}
+  .subtab-item{font-size:14.5px;font-weight:550;color:var(--muted);cursor:pointer;padding-bottom:10px;border-bottom:2px solid transparent;margin-bottom:-1px;-webkit-tap-highlight-color:transparent;}
+  .subtab-item.active{color:var(--text);border-bottom-color:var(--accent);}
+  .lib-panel{display:none;}
+  .lib-panel.active{display:block;}
+
+  .signout-btn{
+    background:none;border:none;color:var(--muted);font-size:13px;
+    cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
+  }
+
+  .builder-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);}
+  .builder-block-head{display:flex;justify-content:space-between;align-items:center;}
+  .builder-block-title{font-weight:300;font-size:17px;}
+  .builder-ex-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+  .builder-ex-row .text-select{flex:1 1 140px;min-width:0;}
+  .builder-ex-row .text-input{flex:1 1 70px;min-width:0;}
+  .builder-ex-row.saved{font-size:14.5px;color:var(--text);flex-wrap:nowrap;}
+  .builder-ex-row.saved .ex-summary{flex:1 1 auto;overflow-wrap:break-word;}
+</style>
+</head>
+<body>
+<div class="wrap" id="authGate" style="display:none;">
+  <header>
+    <div>
+      <h1>Iron Log</h1>
+      <div class="tag">Sign in to continue</div>
+    </div>
+  </header>
+  <div class="form-label" style="margin-top:0;">Email</div>
+  <input type="email" class="text-input" id="authEmail" autocomplete="username">
+  <div class="form-label">Password</div>
+  <input type="password" class="text-input" id="authPassword" autocomplete="current-password">
+  <button type="button" class="btn btn-primary" id="authSubmitBtn">Sign In</button>
+  <div class="status" id="authStatus"></div>
+</div>
+
+<div class="wrap" id="appRoot" style="display:none;">
+  <header>
+    <div>
+      <h1>Iron Log</h1>
+      <div class="tag">12-week progressive overload</div>
+    </div>
+    <button type="button" class="signout-btn" id="signOutBtn">Sign out</button>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-view="log">Log Workout</div>
+    <div class="tab" data-view="history">History</div>
+    <div class="tab" data-view="programs">Programs</div>
+    <div class="tab" data-view="library">Library</div>
+  </div>
+
+  <div id="logView">
+    <div class="clockbar">
+      <div>
+        <div class="clock-label" id="clockLabel">Workout Timer</div>
+        <div class="clock-time" id="clockTime">00:00</div>
+      </div>
+      <button id="clockBtn">Start Workout</button>
+    </div>
+
+    <div class="select-group">
+      <div class="select-label">Phase</div>
+      <select id="phaseSelect"></select>
+    </div>
+    <div class="select-group">
+      <div class="select-label">Day</div>
+      <select id="daySelect"></select>
+    </div>
+    <div id="exercises"></div>
+    <button class="btn btn-primary" id="saveBtn">Save Workout</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div id="historyView" style="display:none;"></div>
+  <div id="programsView" style="display:none;"></div>
+  <div id="libraryView" style="display:none;"></div>
+</div>
+
+<div class="restbar" id="restBar">
+  <div class="rest-time" id="restTime">01:15</div>
+  <div class="rest-controls">
+    <button id="restMinus">-15</button>
+    <button id="restPlus">+15</button>
+    <button id="restToggle" class="primary">Pause</button>
+    <button id="restClose">Dismiss</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://rrqljyhfjoyancgfefcb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJycWxqeWhmam95YW5jZ2ZlZmNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwOTY0MDMsImV4cCI6MjA2OTY3MjQwM30.aWcGiDPyaQy6iK9umVy8feZowfV_1ea8143WEpLmcF0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let ACTIVE_PROGRAM = null;   // full row from `programs`
+let EXERCISES_BY_ID = {};    // id -> display_name
+let PROGRAM = {};            // legacy shape, rebuilt from ACTIVE_PROGRAM.structure
+let SET_PRESETS = {};        // = ACTIVE_PROGRAM.set_presets
+
+function structureToProgram(structure){
+  const program = {};
+  structure.forEach(phase=>{
+    const days = {};
+    phase.days.forEach(day=>{
+      days[day.name] = day.exercises.map(ex=>[
+        EXERCISES_BY_ID[ex.exerciseId] || '(unknown exercise)',
+        ex.sets, ex.target, ex.exerciseId
+      ]);
+    });
+    program[phase.name] = days;
+  });
+  return program;
+}
+
+async function loadExercisesById(){
+  const { data, error } = await sb.from('exercises').select('id, display_name');
+  const map = {};
+  if(!error){ (data||[]).forEach(r=>{ map[r.id] = r.display_name; }); }
+  return map;
+}
+
+async function loadActiveProgram(){
+  const { data, error } = await sb.from('programs').select('*').eq('is_active', true).single();
+  if(error || !data) return null;
+  return data;
+}
+
+const phaseSelect = document.getElementById('phaseSelect');
+const daySelect = document.getElementById('daySelect');
+const exercisesEl = document.getElementById('exercises');
+const statusEl = document.getElementById('status');
+
+function populatePhases(){
+  phaseSelect.innerHTML = '';
+  Object.keys(PROGRAM).forEach(p=>{
+    const o=document.createElement('option'); o.value=p; o.textContent=p;
+    phaseSelect.appendChild(o);
+  });
+}
+
+async function populateDays(){
+  daySelect.innerHTML='';
+  Object.keys(PROGRAM[phaseSelect.value]).forEach(d=>{
+    const o=document.createElement('option'); o.value=d; o.textContent=d;
+    daySelect.appendChild(o);
+  });
+  await renderExercises();
+}
+
+function tally(done,total){
+  return `${done}/${total} sets`;
+}
+
+function parseLeadingNumber(str){
+  const m = str.match(/\d+/);
+  return m ? parseInt(m[0],10) : null;
+}
+
+function findLastSet(exerciseId, logs){
+  for(let i=logs.length-1;i>=0;i--){
+    const match = logs[i].exercises.find(e=>e.exerciseId===exerciseId);
+    if(match && match.sets.length){
+      // prefer the last working set (skip warmups) so suggestions aren't based on warmup weight
+      const working = match.sets.filter(s=>!s.tag || s.tag==='working' || s.tag==='dropset' || s.tag==='failure');
+      if(working.length) return working[working.length-1];
+      return match.sets[match.sets.length-1];
+    }
+  }
+  return null;
+}
+
+function renderProgressionPanel(panelEl, exerciseId, phase, logs){
+  const matches = logs
+    .filter(l => l.program_id === ACTIVE_PROGRAM.id && l.phase === phase && l.exercises.some(e=>e.exerciseId===exerciseId))
+    .sort((a,b)=> new Date(a.dateISO) - new Date(b.dateISO));
+
+  if(!matches.length){
+    panelEl.innerHTML = `<div class="prog-empty">No logs yet this phase.</div>`;
+    return;
+  }
+
+  panelEl.innerHTML = matches.map(entry=>{
+    const ex = entry.exercises.find(e=>e.exerciseId===exerciseId);
+    const d = new Date(entry.dateISO);
+    const dateStr = d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const tagAbbr = {warmup:'wu', dropset:'ds', failure:'f'};
+    const setsStr = ex.sets.map(s=>{
+      const abbr = tagAbbr[s.tag];
+      return `${s.weight||'-'}\u00d7${s.reps||'-'}${abbr?`<span class="prog-tag ${s.tag}">${abbr}</span>`:''}`;
+    }).join(', ');
+    return `<div class="prog-row"><span class="prog-date">${dateStr}</span><span class="prog-sets">${setsStr}</span></div>`;
+  }).join('');
+}
+
+async function renderExercises(){
+  exercisesEl.innerHTML='';
+  const day = daySelect.value;
+  const list = PROGRAM[phaseSelect.value][day];
+  const isLegDay = /leg/i.test(day);
+  const increment = isLegDay ? 5 : 2.5;
+  const logs = await loadLogs();
+
+  for(let exIdx=0; exIdx<list.length; exIdx++){
+    const [name, sets, target, exerciseId] = list[exIdx];
+    const presetKey = `${phaseSelect.value}::${day}`;
+    const presetSets = (SET_PRESETS[presetKey] && SET_PRESETS[presetKey][name]) || null;
+    const card = document.createElement('div');
+    card.className='exercise collapsed';
+    card.dataset.name=name;
+    card.dataset.exIdx=exIdx;
+
+    const head = document.createElement('div');
+    head.className='ex-head';
+    head.innerHTML = `<div><div class="ex-name">${name}</div><div class="ex-target">${sets} sets \u00b7 ${target}</div><div class="suggestion" id="sugg-${exIdx}"></div></div><div class="ex-right"><div class="tally" id="tally-${exIdx}">${tally(0,sets)}</div><span class="chevron">\u25BE</span></div>`;
+    head.addEventListener('click', ()=>{ card.classList.toggle('collapsed'); });
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'ex-rows';
+
+    const subtabs = document.createElement('div');
+    subtabs.className = 'ex-subtabs';
+    subtabs.innerHTML = `<div class="ex-subtab active" data-panel="log-${exIdx}">Log</div><div class="ex-subtab" data-panel="prog-${exIdx}">Progression</div>`;
+    body.appendChild(subtabs);
+
+    const logPanel = document.createElement('div');
+    logPanel.className = 'ex-panel active';
+    logPanel.id = `log-${exIdx}`;
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'set-headers';
+    headerRow.innerHTML = `<div class="sh sh-set">Set</div><div class="sh sh-field">Lbs</div><div class="sh sh-field">Reps</div><div class="sh sh-check"></div><div class="sh sh-rm"></div>`;
+    logPanel.appendChild(headerRow);
+
+    const setsList = document.createElement('div');
+    setsList.className = 'sets-list';
+    setsList.dataset.ex = exIdx;
+    logPanel.appendChild(setsList);
+
+    for(let s=1;s<=sets;s++){
+      const preset = presetSets && presetSets[s-1];
+      setsList.appendChild(buildSetRow(exIdx, s, preset));
+    }
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'add-set-btn';
+    addBtn.dataset.ex = exIdx;
+    addBtn.textContent = '+ Add Set';
+    logPanel.appendChild(addBtn);
+
+    body.appendChild(logPanel);
+
+    const progPanel = document.createElement('div');
+    progPanel.className = 'ex-panel';
+    progPanel.id = `prog-${exIdx}`;
+    progPanel.innerHTML = `<div class="prog-empty">Loading\u2026</div>`;
+    body.appendChild(progPanel);
+
+    subtabs.querySelectorAll('.ex-subtab').forEach(st=>{
+      st.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        subtabs.querySelectorAll('.ex-subtab').forEach(x=>x.classList.remove('active'));
+        st.classList.add('active');
+        body.querySelectorAll('.ex-panel').forEach(p=>p.classList.remove('active'));
+        document.getElementById(st.dataset.panel).classList.add('active');
+      });
+    });
+
+    card.appendChild(body);
+    exercisesEl.appendChild(card);
+
+    // populate progression panel for current phase
+    renderProgressionPanel(progPanel, exerciseId, phaseSelect.value, logs);
+
+    // fill in progression suggestion
+    const last = findLastSet(exerciseId, logs);
+    if(last && last.weight){
+      const el = document.getElementById(`sugg-${exIdx}`);
+      const lastW = parseFloat(last.weight);
+      const lastR = parseInt(last.reps,10);
+      if(el && !isNaN(lastW)){
+        const targetReps = parseLeadingNumber(target);
+        let verdict;
+        if(!isNaN(lastR) && targetReps && lastR >= targetReps){
+          verdict = `try ${lastW + increment}`;
+        } else {
+          verdict = `hold at ${lastW}`;
+        }
+        el.textContent = `Last: ${last.weight}\u00d7${last.reps || '-'} \u2192 ${verdict}`;
+      }
+    }
+  }
+
+  exercisesEl.removeEventListener('input', updateTallies);
+  exercisesEl.addEventListener('input', updateTallies);
+  exercisesEl.removeEventListener('input', queueDraftSave);
+  exercisesEl.addEventListener('input', queueDraftSave);
+  exercisesEl.removeEventListener('change', handleSetBlur);
+  exercisesEl.addEventListener('change', handleSetBlur);
+  updateTallies();
+}
+
+function setBtnDisplay(tag, setNum){
+  if(tag==='warmup') return '\u{1F525}'; // fire
+  if(tag==='dropset') return 'D';
+  if(tag==='failure') return 'F';
+  return setNum;
+}
+
+function buildSetRow(exIdx, setNum, preset){
+  const row=document.createElement('div');
+  row.className='setrow';
+  const presetWeight = preset && preset.weight != null ? preset.weight : '';
+  const presetReps = preset && preset.reps != null ? preset.reps : '';
+  const presetTag = preset ? preset.tag : '';
+  const iconTag = (presetTag === 'working') ? '' : presetTag;
+  row.innerHTML = `<div class="tag-wrap">
+      <button type="button" class="set-tag-btn" data-ex="${exIdx}" data-set="${setNum}" data-tag="${iconTag}">${setBtnDisplay(iconTag, setNum)}</button>
+      <div class="tag-menu" data-ex="${exIdx}" data-set="${setNum}">
+        <div data-tag="">Set</div>
+        <div data-tag="warmup">Warmup</div>
+        <div data-tag="dropset">Drop</div>
+        <div data-tag="failure">Failure</div>
+      </div>
+    </div>
+    <div class="field-wrap">
+      <input type="text" inputmode="decimal" placeholder="lbs" data-ex="${exIdx}" data-field="weight" data-set="${setNum}" value="${presetWeight}">
+    </div>
+    <div class="field-wrap reps-wrap">
+      <input type="text" inputmode="numeric" placeholder="reps" data-ex="${exIdx}" data-field="reps" data-set="${setNum}" value="${presetReps}">
+      <span class="unit">reps</span>
+    </div>
+    <button type="button" class="check-btn" data-ex="${exIdx}" data-set="${setNum}">\u2713</button>
+    <button type="button" class="remove-set-btn" data-ex="${exIdx}" data-set="${setNum}">\u2212</button>`;
+  return row;
+}
+
+function renumberExercise(exIdx){
+  const list = exercisesEl.querySelector(`.sets-list[data-ex="${exIdx}"]`);
+  if(!list) return;
+  Array.from(list.children).forEach((row, i)=>{
+    const setNum = i+1;
+    row.querySelectorAll('[data-ex][data-set]').forEach(el=>{ el.dataset.set = setNum; });
+    const tagBtn = row.querySelector('.set-tag-btn');
+    if(tagBtn) tagBtn.textContent = setBtnDisplay(tagBtn.dataset.tag, setNum);
+  });
+  updateTallies();
+}
+
+function closeAllTagMenus(){
+  document.querySelectorAll('.tag-menu.open').forEach(m=>m.classList.remove('open'));
+}
+
+document.addEventListener('click', (e)=>{
+  const addBtn = e.target.closest('.add-set-btn');
+  if(addBtn){
+    const exIdx = addBtn.dataset.ex;
+    const list = exercisesEl.querySelector(`.sets-list[data-ex="${exIdx}"]`);
+    const nextNum = list.children.length + 1;
+    list.appendChild(buildSetRow(exIdx, nextNum, null));
+    updateTallies();
+    queueDraftSave();
+    e.stopPropagation();
+    return;
+  }
+  const rmBtn = e.target.closest('.remove-set-btn');
+  if(rmBtn){
+    const exIdx = rmBtn.dataset.ex;
+    const row = rmBtn.closest('.setrow');
+    row.remove();
+    renumberExercise(exIdx);
+    queueDraftSave();
+    e.stopPropagation();
+    return;
+  }
+  const checkBtn = e.target.closest('.check-btn');
+  if(checkBtn){
+    if(!isWorkoutActive()){
+      statusEl.textContent = 'Start the workout to log sets.';
+      e.stopPropagation();
+      return;
+    }
+    const nowChecked = !checkBtn.classList.contains('checked');
+    checkBtn.classList.toggle('checked', nowChecked);
+    updateTallies();
+    queueDraftSave();
+    if(nowChecked) startRestTimer();
+    e.stopPropagation();
+    return;
+  }
+  const btn = e.target.closest('.set-tag-btn');
+  if(btn){
+    const exIdx = btn.dataset.ex, s = btn.dataset.set;
+    const menu = exercisesEl.querySelector(`.tag-menu[data-ex="${exIdx}"][data-set="${s}"]`);
+    const wasOpen = menu.classList.contains('open');
+    closeAllTagMenus();
+    if(!wasOpen) menu.classList.add('open');
+    e.stopPropagation();
+    return;
+  }
+  const item = e.target.closest('.tag-menu div');
+  if(item){
+    const menu = item.closest('.tag-menu');
+    const exIdx = menu.dataset.ex, s = menu.dataset.set;
+    const tag = item.dataset.tag;
+    const tBtn = exercisesEl.querySelector(`.set-tag-btn[data-ex="${exIdx}"][data-set="${s}"]`);
+    tBtn.dataset.tag = tag;
+    tBtn.textContent = setBtnDisplay(tag, s);
+    closeAllTagMenus();
+    queueDraftSave();
+    e.stopPropagation();
+    return;
+  }
+  closeAllTagMenus();
+});
+
+function handleSetBlur(e){
+  if(e.target.tagName !== 'INPUT') return;
+  if(!isWorkoutActive()) return;
+  const exIdx = e.target.dataset.ex, s = e.target.dataset.set;
+  const w = exercisesEl.querySelector(`input[data-ex="${exIdx}"][data-field="weight"][data-set="${s}"]`);
+  const r = exercisesEl.querySelector(`input[data-ex="${exIdx}"][data-field="reps"][data-set="${s}"]`);
+  if(w && r && w.value.trim() && r.value.trim()){
+    startRestTimer();
+  }
+}
+
+function updateTallies(){
+  const list = PROGRAM[phaseSelect.value][daySelect.value];
+  list.forEach((ex,exIdx)=>{
+    const rows = exercisesEl.querySelectorAll(`.sets-list[data-ex="${exIdx}"] .setrow`);
+    const sets = rows.length;
+    let done=0;
+    rows.forEach(row=>{
+      const c = row.querySelector('.check-btn');
+      if(c && c.classList.contains('checked')) done++;
+    });
+    const t = document.getElementById(`tally-${exIdx}`);
+    if(t) t.textContent = tally(done, sets);
+    const card = exercisesEl.querySelector(`.exercise[data-ex-idx="${exIdx}"]`);
+    if(card) card.classList.toggle('complete', done === sets && sets > 0);
+  });
+}
+
+phaseSelect.addEventListener('change', populateDays);
+daySelect.addEventListener('change', renderExercises);
+setLoggingLocked(true);
+
+// ---- Workout clock ----
+let workoutStartMs = null;
+let workoutEndMs = null;
+let clockInterval = null;
+const clockTimeEl = document.getElementById('clockTime');
+const clockBtn = document.getElementById('clockBtn');
+const clockLabel = document.getElementById('clockLabel');
+
+function fmtHMS(totalSec){
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  const pad = n=>String(n).padStart(2,'0');
+  return h>0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+function isWorkoutActive(){
+  return !!workoutStartMs && !workoutEndMs;
+}
+
+function setLoggingLocked(locked){
+  exercisesEl.classList.toggle('locked', locked);
+}
+
+clockBtn.addEventListener('click', ()=>{
+  if(!workoutStartMs || workoutEndMs){
+    // start (fresh or restart)
+    workoutStartMs = Date.now();
+    workoutEndMs = null;
+    clockLabel.textContent = 'Workout Timer (running)';
+    clockBtn.textContent = 'End Workout';
+    clockBtn.classList.remove('ended');
+    clockInterval = setInterval(()=>{
+      clockTimeEl.textContent = fmtHMS(Math.floor((Date.now()-workoutStartMs)/1000));
+    },1000);
+    setLoggingLocked(false);
+  } else {
+    workoutEndMs = Date.now();
+    clearInterval(clockInterval);
+    clockTimeEl.textContent = fmtHMS(Math.floor((workoutEndMs-workoutStartMs)/1000));
+    clockLabel.textContent = 'Workout Timer (ended)';
+    clockBtn.textContent = 'Start New';
+    clockBtn.classList.add('ended');
+    setLoggingLocked(true);
+  }
+  queueDraftSave();
+});
+
+function getWorkoutDurationMin(){
+  if(workoutStartMs && workoutEndMs){
+    return Math.round((workoutEndMs-workoutStartMs)/60000);
+  }
+  if(workoutStartMs && !workoutEndMs){
+    return Math.round((Date.now()-workoutStartMs)/60000);
+  }
+  return null;
+}
+
+// ---- Rest timer ----
+const restBar = document.getElementById('restBar');
+const restTimeEl = document.getElementById('restTime');
+const restToggle = document.getElementById('restToggle');
+let restRemaining = 75;
+let restDefault = 75;
+let restInterval = null;
+let restRunning = false;
+
+function restDefaultForPhase(){
+  const phase = phaseSelect.value || '';
+  if(/Phase 1/.test(phase)) return 75;
+  if(/Phase 2/.test(phase)) return 150;
+  if(/Phase 3/.test(phase)) return 210;
+  return 60;
+}
+
+function renderRest(){
+  const m = Math.floor(restRemaining/60), s = restRemaining%60;
+  restTimeEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function tickRest(){
+  restRemaining--;
+  if(restRemaining <= 0){
+    restRemaining = 0;
+    renderRest();
+    clearInterval(restInterval);
+    restRunning = false;
+    restToggle.textContent = 'Restart';
+    restBar.classList.add('flash');
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+    beep();
+    return;
+  }
+  renderRest();
+}
+
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 880;
+    osc.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  }catch(e){}
+}
+
+function startRestTimer(){
+  restDefault = restDefaultForPhase();
+  restRemaining = restDefault;
+  restBar.classList.remove('flash');
+  restBar.classList.add('visible');
+  renderRest();
+  clearInterval(restInterval);
+  restInterval = setInterval(tickRest,1000);
+  restRunning = true;
+  restToggle.textContent = 'Pause';
+}
+
+document.getElementById('restMinus').addEventListener('click', ()=>{
+  restRemaining = Math.max(0, restRemaining-15);
+  renderRest();
+});
+document.getElementById('restPlus').addEventListener('click', ()=>{
+  restRemaining += 15;
+  restBar.classList.remove('flash');
+  renderRest();
+});
+restToggle.addEventListener('click', ()=>{
+  if(restToggle.textContent === 'Restart'){
+    startRestTimer();
+    return;
+  }
+  if(restRunning){
+    clearInterval(restInterval);
+    restRunning = false;
+    restToggle.textContent = 'Resume';
+  } else {
+    restInterval = setInterval(tickRest,1000);
+    restRunning = true;
+    restToggle.textContent = 'Pause';
+  }
+});
+document.getElementById('restClose').addEventListener('click', ()=>{
+  clearInterval(restInterval);
+  restRunning = false;
+  restBar.classList.remove('visible','flash');
+});
+
+// ---- Storage adapter: works standalone (localStorage) with no dependency on
+// Claude's publish flow. Falls back to window.storage only if it's ever present
+// and actually functional (e.g. running inside a published artifact).
+async function storeGet(key){
+  if(window.storage){
+    try{
+      const res = await window.storage.get(key, false);
+      if(res) return res.value;
+    }catch(e){ /* fall through to localStorage */ }
+  }
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+async function storeSet(key, value){
+  if(window.storage){
+    try{
+      const res = await window.storage.set(key, value, false);
+      if(res) return true;
+    }catch(e){ /* fall through to localStorage */ }
+  }
+  try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+}
+async function storeDelete(key){
+  if(window.storage){
+    try{ await window.storage.delete(key, false); }catch(e){ /* ignore */ }
+  }
+  try{ localStorage.removeItem(key); }catch(e){ /* ignore */ }
+}
+
+async function loadLogs(){
+  try{
+    const { data, error } = await sb.from('workout_logs').select('*').order('date_iso', {ascending:true});
+    if(error) throw error;
+    return (data||[]).map(row=>({
+      id: row.id,
+      dateISO: row.date_iso,
+      phase: row.phase,
+      day: row.day,
+      durationMin: row.duration_min,
+      exercises: row.exercises,
+      program_id: row.program_id,
+      program_name: row.program_name,
+    }));
+  }catch(e){ return []; }
+}
+async function insertLog(entry){
+  try{
+    const { data, error } = await sb.from('workout_logs').insert({
+      program_id: entry.program_id,
+      program_name: entry.program_name,
+      date_iso: entry.dateISO,
+      phase: entry.phase,
+      day: entry.day,
+      duration_min: entry.durationMin,
+      exercises: entry.exercises,
+    }).select().single();
+    if(error) throw error;
+    return data.id;
+  }catch(e){ return null; }
+}
+async function deleteLog(id){
+  try{
+    const { error } = await sb.from('workout_logs').delete().eq('id', id);
+    return !error;
+  }catch(e){ return false; }
+}
+
+async function loadDraft(){
+  try{
+    const v = await storeGet('workout-draft');
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+async function saveDraft(draft){
+  await storeSet('workout-draft', JSON.stringify(draft));
+}
+async function clearDraft(){
+  await storeDelete('workout-draft');
+}
+
+function collectDraftState(){
+  const phase = phaseSelect.value, day = daySelect.value;
+  const list = PROGRAM[phase] && PROGRAM[phase][day];
+  if(!list) return null;
+  const exercises = [];
+  list.forEach((ex,exIdx)=>{
+    const [name,,,exerciseId] = ex;
+    const rows = exercisesEl.querySelectorAll(`.sets-list[data-ex="${exIdx}"] .setrow`);
+    const sets = [];
+    rows.forEach(row=>{
+      const w = row.querySelector('input[data-field="weight"]').value;
+      const r = row.querySelector('input[data-field="reps"]').value;
+      const tagBtn = row.querySelector('.set-tag-btn');
+      const tag = tagBtn ? tagBtn.dataset.tag : '';
+      const checked = row.querySelector('.check-btn').classList.contains('checked');
+      sets.push({weight:w, reps:r, tag, checked});
+    });
+    exercises.push({name, exerciseId, sets});
+  });
+  return {
+    phase, day, exercises, workoutStartMs, workoutEndMs, savedAt: Date.now(),
+    programId: ACTIVE_PROGRAM && ACTIVE_PROGRAM.id,
+    programName: ACTIVE_PROGRAM && ACTIVE_PROGRAM.name,
+  };
+}
+
+let draftSaveTimer = null;
+function queueDraftSave(){
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(()=>{
+    const state = collectDraftState();
+    if(state) saveDraft(state);
+  }, 400);
+}
+
+function applyDraftToDom(draft){
+  draft.exercises.forEach((exDraft, exIdx)=>{
+    const list = exercisesEl.querySelector(`.sets-list[data-ex="${exIdx}"]`);
+    if(!list) return;
+    // rebuild rows to match draft's set count exactly
+    list.innerHTML = '';
+    exDraft.sets.forEach((s, i)=>{
+      const setNum = i+1;
+      const iconTag = (s.tag === 'working' || !s.tag) ? '' : s.tag;
+      const row = buildSetRow(exIdx, setNum, {weight: s.weight || null, reps: s.reps || null, tag: s.tag || 'working'});
+      const tagBtn = row.querySelector('.set-tag-btn');
+      tagBtn.dataset.tag = iconTag;
+      tagBtn.textContent = setBtnDisplay(iconTag, setNum);
+      if(s.checked) row.querySelector('.check-btn').classList.add('checked');
+      list.appendChild(row);
+    });
+  });
+  updateTallies();
+}
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const phase = phaseSelect.value, day = daySelect.value;
+  const list = PROGRAM[phase][day];
+  const exercises = [];
+  list.forEach((ex,exIdx)=>{
+    const [name,,,exerciseId] = ex;
+    const setData=[];
+    const rows = exercisesEl.querySelectorAll(`.sets-list[data-ex="${exIdx}"] .setrow`);
+    rows.forEach(row=>{
+      const s = row.querySelector('.set-tag-btn').dataset.set;
+      const w = row.querySelector('input[data-field="weight"]').value.trim();
+      const r = row.querySelector('input[data-field="reps"]').value.trim();
+      const tagBtn = row.querySelector('.set-tag-btn');
+      const tag = tagBtn && tagBtn.dataset.tag ? tagBtn.dataset.tag : 'working';
+      if(w || r) setData.push({set:s, weight:w, reps:r, tag});
+    });
+    if(setData.length) exercises.push({exerciseId, name, sets:setData});
+  });
+
+  if(!exercises.length){
+    statusEl.textContent = 'Nothing logged \u2014 fill in at least one set.';
+    return;
+  }
+
+  statusEl.textContent = 'Saving...';
+  const durationMin = getWorkoutDurationMin();
+  const entry = {
+    dateISO: new Date().toISOString(),
+    phase, day, exercises, durationMin,
+    program_id: ACTIVE_PROGRAM.id,
+    program_name: ACTIVE_PROGRAM.name,
+  };
+  const savedId = await insertLog(entry);
+  const ok = !!savedId;
+  statusEl.textContent = ok ? 'Workout saved.' : 'Save failed \u2014 try again.';
+  if(ok){
+    await clearDraft();
+    renderExercises();
+    // reset workout clock for next session
+    workoutStartMs = null; workoutEndMs = null;
+    clearInterval(clockInterval);
+    clockTimeEl.textContent = '00:00';
+    clockLabel.textContent = 'Workout Timer';
+    clockBtn.textContent = 'Start Workout';
+    clockBtn.classList.remove('ended');
+    setLoggingLocked(true);
+    // hide rest bar
+    clearInterval(restInterval);
+    restBar.classList.remove('visible','flash');
+  }
+});
+
+// Tabs
+const TAB_VIEWS = ['log', 'history', 'programs', 'library'];
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', async ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const view = tab.dataset.view;
+    TAB_VIEWS.forEach(v=>{
+      document.getElementById(v+'View').style.display = (v===view) ? 'block' : 'none';
+    });
+    if(view==='history') await renderHistory();
+    else if(view==='programs') await renderPrograms();
+    else if(view==='library') await renderLibrary();
+  });
+});
+
+async function renderHistory(){
+  const hv = document.getElementById('historyView');
+  const logs = (await loadLogs()).slice().reverse();
+  if(!logs.length){
+    hv.innerHTML = '<div class="empty">No workouts logged yet.</div>';
+    return;
+  }
+  hv.innerHTML='';
+  logs.forEach(entry=>{
+    const d = new Date(entry.dateISO);
+    const dateStr = d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    const div = document.createElement('div');
+    div.className='hist-entry';
+    div.innerHTML = `
+      <div class="hist-top">
+        <div><div class="hist-date">${dateStr}</div><div class="hist-meta">${entry.program_name} \u00b7 ${entry.phase} \u00b7 ${entry.day}${entry.durationMin ? ' \u00b7 ' + entry.durationMin + ' min' : ''}</div></div>
+        <div class="hist-meta">${entry.exercises.length} exercises</div>
+      </div>
+      <div class="hist-detail" id="detail-${entry.id}">
+        ${entry.exercises.map(ex=>`<div class="hist-ex"><b>${ex.name}:</b> <span>${ex.sets.map(s=>`${s.weight||'-'}\u00d7${s.reps||'-'}`).join(', ')}</span></div>`).join('')}
+        <button class="del" data-id="${entry.id}">Delete entry</button>
+      </div>
+    `;
+    div.querySelector('.hist-top').addEventListener('click', ()=>{
+      document.getElementById(`detail-${entry.id}`).classList.toggle('open');
+    });
+    div.querySelector('.del').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      await deleteLog(entry.id);
+      renderHistory();
+    });
+    hv.appendChild(div);
+  });
+}
+
+// ---- Programs tab ----
+
+async function renderPrograms(){
+  const pv = document.getElementById('programsView');
+  pv.innerHTML = '<div class="prog-empty">Loading…</div>';
+  const { data: programs, error } = await sb.from('programs').select('id,name,structure,is_active').order('created_at', {ascending:true});
+  if(error){ pv.innerHTML = '<div class="empty">Failed to load programs.</div>'; return; }
+
+  const rows = (programs||[]).map(p=>{
+    const phaseCount = (p.structure||[]).length;
+    const dayCount = (p.structure||[]).reduce((n,ph)=>n+(ph.days||[]).length, 0);
+    return `<div class="list-row">
+      <div class="list-row-top">
+        <div>
+          <div class="list-row-name">${p.name}</div>
+          <div class="list-row-meta">${phaseCount} phase${phaseCount===1?'':'s'} · ${dayCount} day${dayCount===1?'':'s'}</div>
+        </div>
+        ${p.is_active ? '<span class="badge-active">Active</span>' : `<button type="button" class="link-btn set-active-btn" data-id="${p.id}">Set Active</button>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  pv.innerHTML = `
+    <div>${rows || '<div class="empty">No programs yet.</div>'}</div>
+    <button type="button" class="dashed-btn" id="newProgramBtn">+ New Program</button>
+    <div id="programBuilder"></div>
+  `;
+
+  pv.querySelectorAll('.set-active-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      btn.disabled = true; btn.textContent = 'Activating…';
+      await setActiveProgram(parseInt(btn.dataset.id,10));
+      await renderPrograms();
+    });
+  });
+  const newBtn = document.getElementById('newProgramBtn');
+  newBtn.addEventListener('click', ()=>{
+    newBtn.style.display = 'none';
+    startProgramBuilder();
+  });
+}
+
+async function setActiveProgram(id){
+  await sb.from('programs').update({is_active:false}).eq('is_active', true);
+  await sb.from('programs').update({is_active:true}).eq('id', id);
+  EXERCISES_BY_ID = await loadExercisesById();
+  ACTIVE_PROGRAM = await loadActiveProgram();
+  PROGRAM = structureToProgram(ACTIVE_PROGRAM.structure);
+  SET_PRESETS = ACTIVE_PROGRAM.set_presets || {};
+  populatePhases();
+  await populateDays();
+}
+
+// -- catalog data used by the builder --
+let MOVEMENTS_CACHE = [];
+let EQUIPMENT_CACHE = [];
+let MOVEMENT_EQUIPMENT_CACHE = {}; // movement_id -> [{id,name}]
+const exerciseResolveCache = {};   // "movementId::equipmentId" -> {exerciseId, displayName}
+
+async function loadCatalogForBuilder(){
+  const [mv, eq, me] = await Promise.all([
+    sb.from('movements').select('id,name').order('name'),
+    sb.from('equipment').select('id,name').order('name'),
+    sb.from('movement_equipment').select('movement_id,equipment_id'),
+  ]);
+  MOVEMENTS_CACHE = mv.data || [];
+  EQUIPMENT_CACHE = eq.data || [];
+  const eqById = {}; EQUIPMENT_CACHE.forEach(e=>{ eqById[e.id]=e; });
+  MOVEMENT_EQUIPMENT_CACHE = {};
+  (me.data||[]).forEach(row=>{
+    if(!MOVEMENT_EQUIPMENT_CACHE[row.movement_id]) MOVEMENT_EQUIPMENT_CACHE[row.movement_id] = [];
+    if(eqById[row.equipment_id]) MOVEMENT_EQUIPMENT_CACHE[row.movement_id].push(eqById[row.equipment_id]);
+  });
+}
+
+async function resolveOrCreateExercise(movementId, equipmentId){
+  const key = `${movementId}::${equipmentId}`;
+  if(exerciseResolveCache[key]) return exerciseResolveCache[key];
+  const { data: existing } = await sb.from('exercises').select('id,display_name')
+    .eq('movement_id', movementId).eq('equipment_id', equipmentId).maybeSingle();
+  if(existing){
+    exerciseResolveCache[key] = { exerciseId: existing.id, displayName: existing.display_name };
+    return exerciseResolveCache[key];
+  }
+  const movementName = (MOVEMENTS_CACHE.find(m=>m.id===movementId)||{}).name || '';
+  const equipmentName = (EQUIPMENT_CACHE.find(e=>e.id===equipmentId)||{}).name || '';
+  const displayName = `${movementName} (${equipmentName})`;
+  const { data: created, error } = await sb.from('exercises')
+    .insert({movement_id: movementId, equipment_id: equipmentId, display_name: displayName})
+    .select().single();
+  if(error) throw error;
+  exerciseResolveCache[key] = { exerciseId: created.id, displayName: created.display_name };
+  return exerciseResolveCache[key];
+}
+
+async function startProgramBuilder(){
+  await loadCatalogForBuilder();
+  const el = document.getElementById('programBuilder');
+  el.innerHTML = `
+    <div class="builder-block">
+      <div class="form-label" style="margin-top:0;">Program Name</div>
+      <input type="text" class="text-input" id="builderName" placeholder="e.g. Program 2">
+      <div id="builderPhases"></div>
+      <button type="button" class="dashed-btn" id="addPhaseBtn">+ Add Phase</button>
+      <button type="button" class="btn btn-primary" id="saveProgramBtn">Save Program</button>
+      <div class="status" id="builderStatus"></div>
+    </div>
+  `;
+  document.getElementById('addPhaseBtn').addEventListener('click', ()=> addPhaseBlock());
+  document.getElementById('saveProgramBtn').addEventListener('click', saveBuilderProgram);
+  addPhaseBlock();
+}
+
+function addPhaseBlock(){
+  const wrap = document.createElement('div');
+  wrap.className = 'builder-block builder-phase';
+  wrap.innerHTML = `
+    <div class="form-label" style="margin-top:0;">Phase Name</div>
+    <input type="text" class="text-input phase-name-input" placeholder="e.g. Phase 1 — Accumulation">
+    <div class="builder-days"></div>
+    <button type="button" class="link-btn add-day-btn" style="margin-top:12px;">+ Add Day</button>
+  `;
+  document.getElementById('builderPhases').appendChild(wrap);
+  wrap.querySelector('.add-day-btn').addEventListener('click', ()=> addDayBlock(wrap));
+  addDayBlock(wrap);
+}
+
+function addDayBlock(phaseEl){
+  const wrap = document.createElement('div');
+  wrap.className = 'builder-day';
+  wrap.innerHTML = `
+    <div class="form-label">Day Name</div>
+    <input type="text" class="text-input day-name-input" placeholder="e.g. Day 1: Upper Push">
+    <div class="builder-exercises"></div>
+    <div class="builder-ex-row add-ex-row">
+      <select class="text-select ex-movement-select"><option value="">Movement…</option></select>
+      <select class="text-select ex-equipment-select" disabled><option value="">Equipment…</option></select>
+      <input type="text" class="text-input ex-sets-input" placeholder="Sets" inputmode="numeric" style="max-width:70px;">
+      <input type="text" class="text-input ex-target-input" placeholder="Target (e.g. 8-10 reps)">
+      <button type="button" class="link-btn add-ex-btn">+ Add</button>
+    </div>
+  `;
+  phaseEl.querySelector('.builder-days').appendChild(wrap);
+
+  const movementSelect = wrap.querySelector('.ex-movement-select');
+  MOVEMENTS_CACHE.forEach(m=>{
+    const o = document.createElement('option'); o.value = m.id; o.textContent = m.name;
+    movementSelect.appendChild(o);
+  });
+  const equipmentSelect = wrap.querySelector('.ex-equipment-select');
+  movementSelect.addEventListener('change', ()=>{
+    equipmentSelect.innerHTML = '<option value="">Equipment…</option>';
+    const opts = MOVEMENT_EQUIPMENT_CACHE[movementSelect.value] || [];
+    opts.forEach(e=>{
+      const o = document.createElement('option'); o.value = e.id; o.textContent = e.name;
+      equipmentSelect.appendChild(o);
+    });
+    equipmentSelect.disabled = opts.length === 0;
+  });
+
+  wrap.querySelector('.add-ex-btn').addEventListener('click', async ()=>{
+    const movementId = parseInt(movementSelect.value, 10);
+    const equipmentId = parseInt(equipmentSelect.value, 10);
+    const sets = wrap.querySelector('.ex-sets-input').value.trim();
+    const target = wrap.querySelector('.ex-target-input').value.trim();
+    if(!movementId || !equipmentId || !sets){
+      alert('Pick a movement, equipment, and number of sets.');
+      return;
+    }
+    const addBtn = wrap.querySelector('.add-ex-btn');
+    addBtn.disabled = true; addBtn.textContent = '…';
+    const { exerciseId, displayName } = await resolveOrCreateExercise(movementId, equipmentId);
+    addBtn.disabled = false; addBtn.textContent = '+ Add';
+
+    const exRow = document.createElement('div');
+    exRow.className = 'builder-ex-row saved';
+    exRow.dataset.exerciseId = exerciseId;
+    exRow.dataset.sets = sets;
+    exRow.dataset.target = target;
+    exRow.innerHTML = `<span class="ex-summary">${displayName} — ${sets} sets · ${target || 'no target set'}</span><button type="button" class="link-btn danger remove-ex-btn">Remove</button>`;
+    exRow.querySelector('.remove-ex-btn').addEventListener('click', ()=> exRow.remove());
+    wrap.querySelector('.builder-exercises').appendChild(exRow);
+
+    movementSelect.value = '';
+    equipmentSelect.innerHTML = '<option value="">Equipment…</option>';
+    equipmentSelect.disabled = true;
+    wrap.querySelector('.ex-sets-input').value = '';
+    wrap.querySelector('.ex-target-input').value = '';
+  });
+}
+
+async function saveBuilderProgram(){
+  const builderStatusEl = document.getElementById('builderStatus');
+  const name = document.getElementById('builderName').value.trim();
+  if(!name){ builderStatusEl.textContent = 'Program needs a name.'; return; }
+
+  const phaseEls = Array.from(document.querySelectorAll('.builder-phase'));
+  const seenPhaseNames = new Set();
+  const structure = [];
+  for(const phaseEl of phaseEls){
+    const phaseName = phaseEl.querySelector('.phase-name-input').value.trim();
+    if(!phaseName){ builderStatusEl.textContent = 'Every phase needs a name.'; return; }
+    if(seenPhaseNames.has(phaseName)){ builderStatusEl.textContent = `Duplicate phase name: "${phaseName}".`; return; }
+    seenPhaseNames.add(phaseName);
+
+    const dayEls = Array.from(phaseEl.querySelectorAll('.builder-day'));
+    const seenDayNames = new Set();
+    const days = [];
+    for(const dayEl of dayEls){
+      const dayName = dayEl.querySelector('.day-name-input').value.trim();
+      if(!dayName){ builderStatusEl.textContent = 'Every day needs a name.'; return; }
+      if(seenDayNames.has(dayName)){ builderStatusEl.textContent = `Duplicate day name "${dayName}" in phase "${phaseName}".`; return; }
+      seenDayNames.add(dayName);
+
+      const exRows = Array.from(dayEl.querySelectorAll('.builder-ex-row.saved'));
+      const exercises = exRows.map(r=>({
+        exerciseId: parseInt(r.dataset.exerciseId, 10),
+        sets: parseInt(r.dataset.sets, 10),
+        target: r.dataset.target,
+      }));
+      if(!exercises.length){ builderStatusEl.textContent = `Day "${dayName}" needs at least one exercise.`; return; }
+      days.push({ name: dayName, exercises });
+    }
+    if(!days.length){ builderStatusEl.textContent = `Phase "${phaseName}" needs at least one day.`; return; }
+    structure.push({ name: phaseName, days });
+  }
+  if(!structure.length){ builderStatusEl.textContent = 'Add at least one phase.'; return; }
+
+  builderStatusEl.textContent = 'Saving…';
+  const { error } = await sb.from('programs').insert({ name, structure, set_presets: {}, is_active: false });
+  if(error){ builderStatusEl.textContent = 'Save failed — try again.'; return; }
+  builderStatusEl.textContent = 'Program saved.';
+  await renderPrograms();
+}
+
+// ---- Library tab ----
+
+async function renderLibrary(){
+  const lv = document.getElementById('libraryView');
+  lv.innerHTML = `
+    <div class="subtabs-row">
+      <div class="subtab-item active" data-lib="bodyparts">Body Parts</div>
+      <div class="subtab-item" data-lib="equipment">Equipment</div>
+      <div class="subtab-item" data-lib="movements">Movements</div>
+      <div class="subtab-item" data-lib="exercises">Exercises</div>
+    </div>
+    <div class="lib-panel active" id="lib-bodyparts"></div>
+    <div class="lib-panel" id="lib-equipment"></div>
+    <div class="lib-panel" id="lib-movements"></div>
+    <div class="lib-panel" id="lib-exercises"></div>
+  `;
+  lv.querySelectorAll('.subtab-item').forEach(st=>{
+    st.addEventListener('click', ()=>{
+      lv.querySelectorAll('.subtab-item').forEach(x=>x.classList.remove('active'));
+      st.classList.add('active');
+      lv.querySelectorAll('.lib-panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById('lib-'+st.dataset.lib).classList.add('active');
+    });
+  });
+  await renderSimpleCatalogList('body_parts', 'lib-bodyparts', 'Body Part');
+  await renderSimpleCatalogList('equipment', 'lib-equipment', 'Equipment');
+  await renderMovementsPanel();
+  await renderExercisesPanel();
+}
+
+async function renderSimpleCatalogList(table, panelId, label){
+  const panel = document.getElementById(panelId);
+  const { data } = await sb.from(table).select('id,name').order('name');
+  const rows = (data||[]).map(r=>`<div class="list-row"><div class="list-row-name">${r.name}</div></div>`).join('');
+  panel.innerHTML = `
+    <div>${rows || `<div class="empty">No ${label.toLowerCase()}s yet.</div>`}</div>
+    <div class="builder-ex-row" style="margin-top:16px;">
+      <input type="text" class="text-input new-item-input" placeholder="New ${label.toLowerCase()} name">
+      <button type="button" class="link-btn add-item-btn">+ Add</button>
+    </div>
+    <div class="status lib-status"></div>
+  `;
+  panel.querySelector('.add-item-btn').addEventListener('click', async ()=>{
+    const input = panel.querySelector('.new-item-input');
+    const name = input.value.trim();
+    const libStatusEl = panel.querySelector('.lib-status');
+    if(!name) return;
+    const { error: insErr } = await sb.from(table).insert({name});
+    if(insErr){ libStatusEl.textContent = 'Could not add (maybe already exists).'; return; }
+    input.value = '';
+    await renderSimpleCatalogList(table, panelId, label);
+  });
+}
+
+async function renderMovementsPanel(){
+  const panel = document.getElementById('lib-movements');
+  const [mvRes, bpRes, eqRes, mbpRes, meRes] = await Promise.all([
+    sb.from('movements').select('id,name').order('name'),
+    sb.from('body_parts').select('id,name').order('name'),
+    sb.from('equipment').select('id,name').order('name'),
+    sb.from('movement_body_parts').select('movement_id,body_part_id'),
+    sb.from('movement_equipment').select('movement_id,equipment_id'),
+  ]);
+  const movements = mvRes.data || [], bodyParts = bpRes.data || [], equipmentList = eqRes.data || [];
+
+  const bpByMovement = {};
+  (mbpRes.data||[]).forEach(r=>{ (bpByMovement[r.movement_id] ||= []).push(r.body_part_id); });
+  const eqByMovement = {};
+  (meRes.data||[]).forEach(r=>{ (eqByMovement[r.movement_id] ||= []).push(r.equipment_id); });
+
+  const rows = movements.map(m=>{
+    const bpNames = (bpByMovement[m.id]||[]).map(id=>(bodyParts.find(b=>b.id===id)||{}).name).filter(Boolean).join(', ');
+    const eqNames = (eqByMovement[m.id]||[]).map(id=>(equipmentList.find(e=>e.id===id)||{}).name).filter(Boolean).join(', ');
+    return `<div class="list-row">
+      <div class="list-row-name">${m.name}</div>
+      <div class="list-row-meta">${bpNames || 'no body parts set'}</div>
+      <div class="list-row-meta">${eqNames || 'no equipment set'}</div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div>${rows || '<div class="empty">No movements yet.</div>'}</div>
+    <div class="builder-block">
+      <div class="form-label" style="margin-top:0;">New Movement</div>
+      <input type="text" class="text-input" id="newMovementName" placeholder="e.g. Cable Row">
+      <div class="form-label">Body Parts</div>
+      <div class="check-grid" id="newMovementBodyParts">
+        ${bodyParts.map(b=>`<label class="check-row"><input type="checkbox" value="${b.id}"> ${b.name}</label>`).join('')}
+      </div>
+      <div class="form-label">Allowed Equipment</div>
+      <div class="check-grid" id="newMovementEquipment">
+        ${equipmentList.map(e=>`<label class="check-row"><input type="checkbox" value="${e.id}" checked> ${e.name}</label>`).join('')}
+      </div>
+      <button type="button" class="link-btn" id="addMovementBtn" style="margin-top:14px;">+ Add Movement</button>
+      <div class="status" id="movementStatus"></div>
+    </div>
+  `;
+
+  document.getElementById('addMovementBtn').addEventListener('click', async ()=>{
+    const nameInput = document.getElementById('newMovementName');
+    const name = nameInput.value.trim();
+    const movementStatusEl = document.getElementById('movementStatus');
+    if(!name){ movementStatusEl.textContent = 'Name required.'; return; }
+    const bpIds = Array.from(document.querySelectorAll('#newMovementBodyParts input:checked')).map(c=>parseInt(c.value,10));
+    const eqIds = Array.from(document.querySelectorAll('#newMovementEquipment input:checked')).map(c=>parseInt(c.value,10));
+    movementStatusEl.textContent = 'Saving…';
+    const { data: created, error } = await sb.from('movements').insert({name}).select().single();
+    if(error){ movementStatusEl.textContent = 'Could not add (maybe already exists).'; return; }
+    if(bpIds.length) await sb.from('movement_body_parts').insert(bpIds.map(id=>({movement_id: created.id, body_part_id: id})));
+    if(eqIds.length) await sb.from('movement_equipment').insert(eqIds.map(id=>({movement_id: created.id, equipment_id: id})));
+    await renderMovementsPanel();
+  });
+}
+
+async function renderExercisesPanel(){
+  const panel = document.getElementById('lib-exercises');
+  const { data } = await sb.from('exercises').select('id,display_name').order('display_name');
+  const rows = (data||[]).map(r=>`<div class="list-row"><div class="list-row-name">${r.display_name}</div></div>`).join('');
+  panel.innerHTML = `<div>${rows || '<div class="empty">No exercises created yet — they’re created automatically as you build programs.</div>'}</div>`;
+}
+
+// ---- Restore an in-progress workout after a reload/crash/backgrounded tab ----
+async function restoreDraftIfAny(){
+  const draft = await loadDraft();
+  if(!draft || !draft.exercises || !draft.exercises.length) return;
+  // only meaningful to restore if the workout clock was actually running/ended with unsaved data
+  if(!draft.workoutStartMs) return;
+  const minutesAgo = Math.round((Date.now() - (draft.savedAt||Date.now())) / 60000);
+  const label = minutesAgo <= 1 ? 'a moment ago' : `${minutesAgo} min ago`;
+  const ok = confirm(`Resume unsaved workout (${draft.phase} \u2014 ${draft.day}) from ${label}?`);
+  if(!ok){
+    await clearDraft();
+    return;
+  }
+  phaseSelect.value = draft.phase;
+  await populateDays();
+  daySelect.value = draft.day;
+  await renderExercises();
+  applyDraftToDom(draft);
+  workoutStartMs = draft.workoutStartMs;
+  workoutEndMs = draft.workoutEndMs;
+  if(workoutStartMs && !workoutEndMs){
+    clockLabel.textContent = 'Workout Timer (running)';
+    clockBtn.textContent = 'End Workout';
+    clockBtn.classList.remove('ended');
+    clockInterval = setInterval(()=>{
+      clockTimeEl.textContent = fmtHMS(Math.floor((Date.now()-workoutStartMs)/1000));
+    },1000);
+    setLoggingLocked(false);
+  } else if(workoutStartMs && workoutEndMs){
+    clockTimeEl.textContent = fmtHMS(Math.floor((workoutEndMs-workoutStartMs)/1000));
+    clockLabel.textContent = 'Workout Timer (ended)';
+    clockBtn.textContent = 'Start New';
+    clockBtn.classList.add('ended');
+    setLoggingLocked(true);
+  }
+  statusEl.textContent = 'Restored your in-progress workout.';
+}
+
+// ---- One-time migration of pre-Supabase localStorage logs into workout_logs ----
+async function migrateLegacyLocalLogsIfAny(){
+  const MIGRATION_FLAG = 'workout-logs-migrated-v1';
+  try{
+    if(localStorage.getItem(MIGRATION_FLAG)) return;
+    const raw = localStorage.getItem('workout-logs');
+    if(!raw){ localStorage.setItem(MIGRATION_FLAG, '1'); return; }
+    const legacyLogs = JSON.parse(raw);
+    if(!Array.isArray(legacyLogs) || !legacyLogs.length){ localStorage.setItem(MIGRATION_FLAG, '1'); return; }
+
+    // Map legacy exercise name strings -> exerciseId using whatever the current
+    // active program's PROGRAM tuples resolve to (built from the same seed data
+    // the legacy exercises were logged against).
+    const nameToId = {};
+    Object.values(PROGRAM).forEach(days=>{
+      Object.values(days).forEach(list=>{
+        list.forEach(([name,,,exerciseId])=>{ nameToId[name] = exerciseId; });
+      });
+    });
+
+    let allOk = true;
+    for(const entry of legacyLogs){
+      const exercises = (entry.exercises||[]).map(ex=>({
+        exerciseId: nameToId[ex.name] || null,
+        name: ex.name,
+        sets: ex.sets,
+      }));
+      const id = await insertLog({
+        dateISO: entry.dateISO,
+        phase: entry.phase,
+        day: entry.day,
+        durationMin: entry.durationMin,
+        exercises,
+        program_id: ACTIVE_PROGRAM.id,
+        program_name: ACTIVE_PROGRAM.name,
+      });
+      if(!id){ allOk = false; }
+    }
+
+    if(allOk){
+      localStorage.setItem('workout-logs-legacy-backup', raw);
+      localStorage.removeItem('workout-logs');
+      localStorage.setItem(MIGRATION_FLAG, '1');
+    }
+  }catch(e){ /* leave legacy data untouched; will retry next load */ }
+}
+
+// ---- App bootstrap (runs once signed in) ----
+async function startApp(){
+  exercisesEl.innerHTML = '<div class="prog-empty">Loading…</div>';
+  EXERCISES_BY_ID = await loadExercisesById();
+  ACTIVE_PROGRAM = await loadActiveProgram();
+  if(!ACTIVE_PROGRAM){
+    exercisesEl.innerHTML = '<div class="prog-empty">No active program found. Create one in the Programs tab.</div>';
+    return;
+  }
+  PROGRAM = structureToProgram(ACTIVE_PROGRAM.structure);
+  SET_PRESETS = ACTIVE_PROGRAM.set_presets || {};
+
+  populatePhases();
+  await populateDays();
+  setLoggingLocked(true);
+
+  await migrateLegacyLocalLogsIfAny();
+  await restoreDraftIfAny();
+}
+
+// ---- Auth gate ----
+const authGateEl = document.getElementById('authGate');
+const appRootEl = document.getElementById('appRoot');
+
+function showAuthGate(){
+  appRootEl.style.display = 'none';
+  authGateEl.style.display = 'block';
+}
+async function showApp(){
+  authGateEl.style.display = 'none';
+  appRootEl.style.display = 'block';
+  await startApp();
+}
+
+async function attemptSignIn(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const authStatusEl = document.getElementById('authStatus');
+  if(!email || !password){ authStatusEl.textContent = 'Enter your email and password.'; return; }
+  authStatusEl.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ authStatusEl.textContent = error.message; return; }
+  authStatusEl.textContent = '';
+  await showApp();
+}
+document.getElementById('authSubmitBtn').addEventListener('click', attemptSignIn);
+document.getElementById('authPassword').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') attemptSignIn();
+});
+
+document.getElementById('signOutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  showAuthGate();
+});
+
+(async function bootstrap(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ await showApp(); }
+  else { showAuthGate(); }
+})();
+</script>
+</body>
+</html>
