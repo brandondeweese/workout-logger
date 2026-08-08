@@ -10,13 +10,31 @@
     increment,
     locked,
     openMenuKey,
+    catalog,        // { movements, equipment, movementEquipment } - for the swap picker
     onToggleMenu,
     onCheckSet,
     onAutoStartRest,
     onSetField,     // (setIdx, field, value) => void
     onAddSet,       // () => void
     onRemoveSet,    // (setIdx) => void
+    onSwapExercise, // (movementId, equipmentId) => void
   } = $props();
+
+  let swapMovementId = $state('');
+  let swapEquipmentId = $state('');
+  const swapMenuKey = $derived(`swap-${exIdx}`);
+  const swapEquipmentOptions = $derived(swapMovementId ? (catalog.movementEquipment[swapMovementId] || []) : []);
+  function onSwapMovementChange(){ swapEquipmentId = ''; }
+  function openSwapPanel(e){
+    e.stopPropagation();
+    swapMovementId = ''; swapEquipmentId = '';
+    onToggleMenu(swapMenuKey);
+  }
+  function confirmSwap(e){
+    e.stopPropagation();
+    if(!swapMovementId || !swapEquipmentId) return;
+    onSwapExercise(parseInt(swapMovementId, 10), parseInt(swapEquipmentId, 10));
+  }
 
   // Purely presentational UI state - not workout data, so not part of the
   // draft-saved tree (matches the original, which also always started every
@@ -73,10 +91,27 @@
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
     <div class="ex-right">
+      <button type="button" class="link-btn muted swap-trigger" onclick={openSwapPanel}>Swap</button>
       <div class="tally">{doneCount}/{totalCount} sets</div>
       <span class="chevron">&#9662;</span>
     </div>
   </div>
+  {#if openMenuKey === swapMenuKey}
+    <div class="swap-panel" onclick={(e) => e.stopPropagation()}>
+      <select class="text-select" bind:value={swapMovementId} onchange={onSwapMovementChange}>
+        <option value="">Swap to movement…</option>
+        {#each catalog.movements as m}<option value={m.id}>{m.name}</option>{/each}
+      </select>
+      <select class="text-select" bind:value={swapEquipmentId} disabled={!swapEquipmentOptions.length}>
+        <option value="">Equipment…</option>
+        {#each swapEquipmentOptions as e}<option value={e.id}>{e.name}</option>{/each}
+      </select>
+      <div class="swap-panel-actions">
+        <button type="button" class="link-btn" disabled={!swapMovementId || !swapEquipmentId} onclick={confirmSwap}>Confirm Swap</button>
+        <button type="button" class="link-btn muted" onclick={(e) => { e.stopPropagation(); onToggleMenu(null); }}>Cancel</button>
+      </div>
+    </div>
+  {/if}
 
   <div class="ex-rows">
     <div class="ex-subtabs">

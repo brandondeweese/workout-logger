@@ -1,13 +1,22 @@
 <script>
+  import { onMount } from 'svelte';
   import { appState, refreshWorkoutLogs } from '../lib/state.svelte.js';
-  import { insertLog } from '../lib/db.js';
+  import { insertLog, loadCatalogForBuilder, resolveOrCreateExercise } from '../lib/db.js';
   import { loadDraft, saveDraft, clearDraft, queueDraftSave } from '../lib/draft.js';
   import ExerciseCard from './ExerciseCard.svelte';
+  import ExercisePicker from './ExercisePicker.svelte';
   import RestBar from './RestBar.svelte';
 
   let phase = $state('');
   let day = $state('');
   let exercises = $state([]);
+  // catalog for the session-only "swap exercise" / "add exercise" flows below -
+  // these edit `exercises` directly and never touch the saved program
+  // structure, so swapping/adding here only affects this one workout.
+  let catalog = $state({ movements: [], equipment: [], movementEquipment: {} });
+  onMount(async () => {
+    catalog = await loadCatalogForBuilder();
+  });
   let workoutStartMs = $state(null);
   let workoutEndMs = $state(null);
   let clockTimeText = $state('00:00');
@@ -157,6 +166,40 @@
   function handleRemoveSet(exIdx, setIdx){
     exercises[exIdx].sets.splice(setIdx, 1);
   }
+  // Session-only: adds/swaps an exercise in the in-memory `exercises` list for
+  // THIS workout. Never writes to the program's structure - a substitution
+  // (machine's taken, want a variant today) shouldn't permanently edit the
+  // template. resolveOrCreateExercise reuses an existing movement+equipment
+  // row if one exists, or creates it, same as the Program Builder.
+  async function handleAddExercise(movementId, equipmentId, setsCount, target){
+    const { exerciseId, displayName } = await resolveOrCreateExercise(movementId, equipmentId, catalog.movements, catalog.equipment);
+    // exercises are keyed by exerciseId in the {#each} below - a duplicate
+    // would break that keying, so just point them at the existing card.
+    if(exercises.some(ex => ex.exerciseId === exerciseId)){
+      status = `${displayName} is already in this workout.`;
+      return;
+    }
+    const n = parseInt(setsCount, 10) || 1;
+    const newSets = Array.from({ length: n }, () => ({ weight: '', reps: '', tag: '', checked: false }));
+    exercises.push({ exerciseId, name: displayName, target: target || '', sets: newSets, collapsed: false, activeTab: 'log' });
+  }
+  async function handleSwapExercise(exIdx, movementId, equipmentId){
+    const { exerciseId, displayName } = await resolveOrCreateExercise(movementId, equipmentId, catalog.movements, catalog.equipment);
+    if(exercises.some((ex, i) => ex.exerciseId === exerciseId && i !== exIdx)){
+      status = `${displayName} is already in this workout.`;
+      openMenuKey = null;
+      return;
+    }
+    const setCount = exercises[exIdx].sets.length || 1;
+    exercises[exIdx] = {
+      ...exercises[exIdx],
+      exerciseId,
+      name: displayName,
+      sets: Array.from({ length: setCount }, () => ({ weight: '', reps: '', tag: '', checked: false })),
+      collapsed: false,
+    };
+    openMenuKey = null;
+  }
   function handleCheckSet(exIdx, setIdx){
     if(!backdateMode && !(workoutStartMs && !workoutEndMs)){
       status = 'Start the workout to log sets.';
@@ -226,8 +269,14 @@
     // match by exerciseId, not array position - the active program's exercise
     // order could have changed between saving the draft and reloading
     draft.exercises.forEach(draftEx => {
-      const target = exercises.find(ex => ex.exerciseId === draftEx.exerciseId);
-      if(!target) return;
+      let target = exercises.find(ex => ex.exerciseId === draftEx.exerciseId);
+      if(!target){
+        // exerciseId isn't in this day's template - the draft came from a
+        // session-only add/swap (see handleAddExercise/handleSwapExercise),
+        // not the program structure. Append it rather than dropping it.
+        target = { exerciseId: draftEx.exerciseId, name: draftEx.name, target: '', sets: [], collapsed: true, activeTab: 'log' };
+        exercises.push(target);
+      }
       target.sets = draftEx.sets.map(s => ({
         weight: s.weight || '',
         reps: s.reps || '',
@@ -401,14 +450,20 @@
         {increment}
         {locked}
         {openMenuKey}
+        {catalog}
         onToggleMenu={handleToggleMenu}
         onCheckSet={(setIdx) => handleCheckSet(exIdx, setIdx)}
         onAutoStartRest={handleAutoStartRest}
         onSetField={(setIdx, field, value) => handleSetField(exIdx, setIdx, field, value)}
         onAddSet={() => handleAddSet(exIdx)}
         onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
+        onSwapExercise={(movementId, equipmentId) => handleSwapExercise(exIdx, movementId, equipmentId)}
       />
     {/each}
+  </div>
+  <div class="add-exercise-section">
+    <div class="form-label">Add an exercise to this workout</div>
+    <ExercisePicker movements={catalog.movements} equipment={catalog.equipment} movementEquipment={catalog.movementEquipment} onAdd={handleAddExercise} />
   </div>
 {/if}
 

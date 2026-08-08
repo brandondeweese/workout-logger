@@ -80,6 +80,14 @@
   .exercise.collapsed .chevron{transform:rotate(-90deg);}
   .ex-rows{overflow:hidden;max-height:1200px;transition:max-height .22s ease;margin-top:12px;}
   .exercise.collapsed .ex-rows{max-height:0;margin-top:0;}
+  .swap-trigger{font-size:12.5px;}
+  .swap-panel{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    margin-top:10px;padding:12px;background:#1A1917;border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .swap-panel .text-select{flex:1 1 140px;width:auto;}
+  .swap-panel-actions{display:flex;gap:14px;align-items:center;}
+  .add-exercise-section{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
   .ex-subtabs{display:flex;gap:16px;margin-bottom:10px;}
   .ex-subtab{font-size:13px;color:var(--muted);cursor:pointer;padding-bottom:4px;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;}
   .ex-subtab.active{color:var(--text);border-bottom-color:var(--accent);}
