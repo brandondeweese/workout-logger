@@ -15,10 +15,14 @@ export async function refreshWorkoutLogs(){
 
 export async function refreshActiveProgramState(){
   appState.exercisesById = await loadExercisesById();
-  appState.activeProgram = await loadActiveProgram();
-  if(appState.activeProgram){
-    await refreshWorkoutLogs();
+  const program = await loadActiveProgram();
+  // load workoutLogs BEFORE assigning activeProgram - LogWorkout's phase/day
+  // defaulting effect only reacts to activeProgram's identity changing, so it
+  // must already see fresh logs the moment that happens, not a later refetch.
+  if(program){
+    appState.workoutLogs = await loadLogs();
   }
+  appState.activeProgram = program;
 }
 
 export async function startApp(){

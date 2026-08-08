@@ -28,6 +28,39 @@
   let backdateDate = $state(todayDateString());
   let backdateDurationMin = $state('');
 
+  // A phase is "completed" once the most recent logged workout for this
+  // program has moved on to a later phase - phases are calendar/week-based
+  // blocks, not something you clear by doing every day once, so "index before
+  // wherever the last real log landed" is the right definition.
+  function findCurrentPhaseIndex(structure, workoutLogs, programId){
+    const relevant = workoutLogs.filter(l => l.program_id === programId);
+    if(!relevant.length) return 0;
+    const lastLog = relevant[relevant.length - 1]; // workoutLogs is sorted ascending by date
+    const idx = structure.findIndex(p => p.name === lastLog.phase);
+    return idx === -1 ? 0 : idx;
+  }
+
+  // Defaults Log Workout to wherever the user actually left off: the phase of
+  // their most recent log, and the day after that in the split rotation
+  // (cycling within that phase's own day order, wrapping past the last day).
+  function computeDefaultPhaseDay(structure, workoutLogs, programId){
+    const fallback = { phase: structure[0]?.name || '', day: structure[0]?.days[0]?.name || '' };
+    const phaseIdx = findCurrentPhaseIndex(structure, workoutLogs, programId);
+    const phaseObj = structure[phaseIdx];
+    if(!phaseObj) return fallback;
+    const relevant = workoutLogs.filter(l => l.program_id === programId);
+    const lastLog = relevant.length ? relevant[relevant.length - 1] : null;
+    const days = phaseObj.days;
+    const dayIdx = lastLog ? days.findIndex(d => d.name === lastLog.day) : -1;
+    const nextDay = dayIdx === -1 ? days[0] : days[(dayIdx + 1) % days.length];
+    return { phase: phaseObj.name, day: nextDay?.name || fallback.day };
+  }
+
+  const currentPhaseIndex = $derived(
+    appState.activeProgram
+      ? findCurrentPhaseIndex(appState.activeProgram.structure, appState.workoutLogs, appState.activeProgram.id)
+      : 0
+  );
   const phaseNames = $derived(appState.activeProgram ? appState.activeProgram.structure.map(p => p.name) : []);
   const dayNames = $derived(
     appState.activeProgram
@@ -224,8 +257,10 @@
   }
 
   // Whenever the active program changes (initial login, or switching programs
-  // via the Programs tab) reset to its first phase/day. Draft restore only
-  // ever runs once, on the very first load.
+  // via the Programs tab) reset to wherever the user actually left off - the
+  // phase/day just after their most recent log for this program, or the
+  // program's first phase/day if it has none yet. Draft restore only ever
+  // runs once, on the very first load.
   //
   // This effect reads several appState properties (activeProgram, its nested
   // structure/set_presets, exercisesById), and in practice fires more than
@@ -247,8 +282,9 @@
       // WRITES phase/day and never reads them back - reading a $state var it
       // also writes in the same run makes the effect depend on its own write,
       // which self-triggers forever (this caused a real stack overflow).
-      const newPhase = appState.activeProgram.structure[0]?.name || '';
-      const newDay = appState.activeProgram.structure[0]?.days[0]?.name || '';
+      const { phase: newPhase, day: newDay } = computeDefaultPhaseDay(
+        appState.activeProgram.structure, appState.workoutLogs, appState.activeProgram.id
+      );
       const newExercises = buildExercisesForDay(newPhase, newDay);
       phase = newPhase;
       day = newDay;
@@ -341,7 +377,9 @@
 <div class="select-group">
   <div class="select-label">Phase</div>
   <select id="phaseSelect" bind:value={phase} onchange={onPhaseChange}>
-    {#each phaseNames as p}<option value={p}>{p}</option>{/each}
+    {#each phaseNames as p, i}
+      <option value={p}>{p}{i < currentPhaseIndex ? ' ✓ completed' : (i === currentPhaseIndex ? ' (current)' : '')}</option>
+    {/each}
   </select>
 </div>
 <div class="select-group">
