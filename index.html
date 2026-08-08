@@ -6,13 +6,15 @@
 <title>Iron Log</title>
 <style>
   :root{
-    --bg: #121212;
+    --bg: #121111;
+    --dark: #0c0c0c;
     --text: #E9E7E2;
     --muted: #8B8880;
     --line: rgba(255,255,255,0.09);
     --accent: #7DA39C;
     --accent-dim: #4F6B66;
     --danger: #B5735F;
+    --radius: 8px;
   }
   *{box-sizing:border-box;}
   body{
@@ -72,7 +74,7 @@
   .select-group{margin-bottom:6px;}
   .exercise{
     padding:10px 0;max-width:100%;
-    border-radius:8px;transition:background .2s ease;
+    border-radius:var(--radius);transition:background .2s ease;
   }
   .exercise.complete{background:rgba(125,163,156,0.10);}
   .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -113,15 +115,15 @@
   .remove-set-btn:active{border-color:#B5735F;color:#B5735F;}
   .add-set-btn, .dashed-btn{
     display:block;width:100%;margin-top:10px;padding:10px;
-    background:transparent;border:1px dashed var(--line);border-radius:8px;
+    background:transparent;border:1px dashed var(--line);border-radius:var(--radius);
     color:var(--accent);font-size:14px;font-weight:600;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .add-set-btn:active, .dashed-btn:active{border-color:var(--accent);}
   .field-wrap{flex:1 1 0;min-width:0;position:relative;}
   .setrow input{
-    width:100%;min-width:0;background:#1E1D19;
-    border:1px solid var(--line);border-radius:999px;
+    width:100%;min-width:0;background:var(--dark);
+    border:1px solid var(--line);border-radius:var(--radius);
     color:var(--text);padding:12px 14px;font-size:28px;font-weight:600;
     text-align:center;
   }
@@ -154,7 +156,7 @@
     position:absolute;top:24px;left:0;
     background:#1A1917;
     border:1px solid #333029;
-    border-radius:6px;
+    border-radius:var(--radius);
     z-index:30;
     display:none;
     min-width:92px;
@@ -196,7 +198,7 @@
   .prog-tag.dropset{color:#C9A24B;}
   .prog-tag.failure{color:#B5735F;}
   .btn{
-    display:block;width:100%;padding:15px;border:none;border-radius:7px;
+    display:block;width:100%;padding:15px;border:none;border-radius:var(--radius);
     font-weight:650;font-size:16px;
     cursor:pointer;margin-top:24px;-webkit-tap-highlight-color:transparent;
   }
@@ -227,7 +229,7 @@
   .clockbar .clock-time{font-size:26px;font-weight:600;margin-top:3px;}
   .clockbar button{
     background:transparent;color:var(--accent);border:1px solid var(--accent-dim);
-    border-radius:7px;padding:10px 16px;font-weight:550;font-size:14.5px;
+    border-radius:var(--radius);padding:10px 16px;font-weight:550;font-size:14.5px;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .clockbar button.ended{color:var(--muted);border-color:var(--line);}
@@ -256,7 +258,7 @@
 
   /* ---- Programs / Library ---- */
   .text-input, .text-select{
-    width:100%;background:#1E1D19;border:1px solid var(--line);border-radius:8px;
+    width:100%;background:#1E1D19;border:1px solid var(--line);border-radius:var(--radius);
     color:var(--text);padding:11px 14px;font-size:15px;font-weight:400;
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
   }
@@ -275,7 +277,7 @@
   .list-row-name{font-weight:300;font-size:18px;overflow-wrap:break-word;}
   .list-row-meta{font-size:13px;color:var(--muted);margin-top:3px;}
   .badge-active{
-    font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);
+    font-size:11px;letter-spacing:0.5px;text-transform:uppercase;color:var(--bg); background:var(--accent-dim);
     border:1px solid var(--accent-dim);border-radius:999px;padding:4px 10px;white-space:nowrap;
   }
   .link-btn{
@@ -1146,7 +1148,10 @@ async function renderPrograms(){
           <div class="list-row-name">${p.name}</div>
           <div class="list-row-meta">${phaseCount} phase${phaseCount===1?'':'s'} · ${dayCount} day${dayCount===1?'':'s'}</div>
         </div>
-        ${p.is_active ? '<span class="badge-active">Active</span>' : `<button type="button" class="link-btn set-active-btn" data-id="${p.id}">Set Active</button>`}
+        <div style="display:flex;align-items:center;gap:16px;">
+          ${p.is_active ? '<span class="badge-active">Active</span>' : `<button type="button" class="link-btn set-active-btn" data-id="${p.id}">Set Active</button>`}
+          <button type="button" class="link-btn muted edit-program-btn" data-id="${p.id}">Edit</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1162,6 +1167,13 @@ async function renderPrograms(){
       btn.disabled = true; btn.textContent = 'Activating…';
       await setActiveProgram(parseInt(btn.dataset.id,10));
       await renderPrograms();
+    });
+  });
+  pv.querySelectorAll('.edit-program-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const program = (programs||[]).find(p=>p.id===parseInt(btn.dataset.id,10));
+      document.getElementById('newProgramBtn').style.display = 'none';
+      startProgramBuilder(program);
     });
   });
   const newBtn = document.getElementById('newProgramBtn');
@@ -1202,6 +1214,19 @@ async function loadCatalogForBuilder(){
     if(!MOVEMENT_EQUIPMENT_CACHE[row.movement_id]) MOVEMENT_EQUIPMENT_CACHE[row.movement_id] = [];
     if(eqById[row.equipment_id]) MOVEMENT_EQUIPMENT_CACHE[row.movement_id].push(eqById[row.equipment_id]);
   });
+  // refresh the global exercise id->name lookup so pre-filling an edit shows current names
+  EXERCISES_BY_ID = await loadExercisesById();
+}
+
+function buildSavedExRow(exerciseId, displayName, sets, target){
+  const exRow = document.createElement('div');
+  exRow.className = 'builder-ex-row saved';
+  exRow.dataset.exerciseId = exerciseId;
+  exRow.dataset.sets = sets;
+  exRow.dataset.target = target;
+  exRow.innerHTML = `<span class="ex-summary">${displayName} — ${sets} sets · ${target || 'no target set'}</span><button type="button" class="link-btn danger remove-ex-btn">Remove</button>`;
+  exRow.querySelector('.remove-ex-btn').addEventListener('click', ()=> exRow.remove());
+  return exRow;
 }
 
 async function resolveOrCreateExercise(movementId, equipmentId){
@@ -1224,44 +1249,57 @@ async function resolveOrCreateExercise(movementId, equipmentId){
   return exerciseResolveCache[key];
 }
 
-async function startProgramBuilder(){
+let builderEditingProgramId = null;
+
+async function startProgramBuilder(existingProgram){
   await loadCatalogForBuilder();
+  builderEditingProgramId = existingProgram ? existingProgram.id : null;
   const el = document.getElementById('programBuilder');
   el.innerHTML = `
     <div class="builder-block">
       <div class="form-label" style="margin-top:0;">Program Name</div>
-      <input type="text" class="text-input" id="builderName" placeholder="e.g. Program 2">
+      <input type="text" class="text-input" id="builderName" placeholder="e.g. Program 2" value="${existingProgram ? existingProgram.name : ''}">
       <div id="builderPhases"></div>
       <button type="button" class="dashed-btn" id="addPhaseBtn">+ Add Phase</button>
-      <button type="button" class="btn btn-primary" id="saveProgramBtn">Save Program</button>
+      <button type="button" class="btn btn-primary" id="saveProgramBtn">${existingProgram ? 'Save Changes' : 'Save Program'}</button>
       <div class="status" id="builderStatus"></div>
     </div>
   `;
   document.getElementById('addPhaseBtn').addEventListener('click', ()=> addPhaseBlock());
   document.getElementById('saveProgramBtn').addEventListener('click', saveBuilderProgram);
-  addPhaseBlock();
+
+  if(existingProgram && (existingProgram.structure||[]).length){
+    existingProgram.structure.forEach(phaseData=> addPhaseBlock(phaseData));
+  } else {
+    addPhaseBlock();
+  }
 }
 
-function addPhaseBlock(){
+function addPhaseBlock(phaseData){
   const wrap = document.createElement('div');
   wrap.className = 'builder-block builder-phase';
   wrap.innerHTML = `
     <div class="form-label" style="margin-top:0;">Phase Name</div>
-    <input type="text" class="text-input phase-name-input" placeholder="e.g. Phase 1 — Accumulation">
+    <input type="text" class="text-input phase-name-input" placeholder="e.g. Phase 1 — Accumulation" value="${phaseData ? phaseData.name : ''}">
     <div class="builder-days"></div>
     <button type="button" class="link-btn add-day-btn" style="margin-top:12px;">+ Add Day</button>
   `;
   document.getElementById('builderPhases').appendChild(wrap);
   wrap.querySelector('.add-day-btn').addEventListener('click', ()=> addDayBlock(wrap));
-  addDayBlock(wrap);
+
+  if(phaseData && (phaseData.days||[]).length){
+    phaseData.days.forEach(dayData=> addDayBlock(wrap, dayData));
+  } else {
+    addDayBlock(wrap);
+  }
 }
 
-function addDayBlock(phaseEl){
+function addDayBlock(phaseEl, dayData){
   const wrap = document.createElement('div');
   wrap.className = 'builder-day';
   wrap.innerHTML = `
     <div class="form-label">Day Name</div>
-    <input type="text" class="text-input day-name-input" placeholder="e.g. Day 1: Upper Push">
+    <input type="text" class="text-input day-name-input" placeholder="e.g. Day 1: Upper Push" value="${dayData ? dayData.name : ''}">
     <div class="builder-exercises"></div>
     <div class="builder-ex-row add-ex-row">
       <select class="text-select ex-movement-select"><option value="">Movement…</option></select>
@@ -1289,6 +1327,12 @@ function addDayBlock(phaseEl){
     equipmentSelect.disabled = opts.length === 0;
   });
 
+  const exercisesEl2 = wrap.querySelector('.builder-exercises');
+  (dayData ? dayData.exercises||[] : []).forEach(ex=>{
+    const displayName = EXERCISES_BY_ID[ex.exerciseId] || '(unknown exercise)';
+    exercisesEl2.appendChild(buildSavedExRow(ex.exerciseId, displayName, ex.sets, ex.target));
+  });
+
   wrap.querySelector('.add-ex-btn').addEventListener('click', async ()=>{
     const movementId = parseInt(movementSelect.value, 10);
     const equipmentId = parseInt(equipmentSelect.value, 10);
@@ -1303,14 +1347,7 @@ function addDayBlock(phaseEl){
     const { exerciseId, displayName } = await resolveOrCreateExercise(movementId, equipmentId);
     addBtn.disabled = false; addBtn.textContent = '+ Add';
 
-    const exRow = document.createElement('div');
-    exRow.className = 'builder-ex-row saved';
-    exRow.dataset.exerciseId = exerciseId;
-    exRow.dataset.sets = sets;
-    exRow.dataset.target = target;
-    exRow.innerHTML = `<span class="ex-summary">${displayName} — ${sets} sets · ${target || 'no target set'}</span><button type="button" class="link-btn danger remove-ex-btn">Remove</button>`;
-    exRow.querySelector('.remove-ex-btn').addEventListener('click', ()=> exRow.remove());
-    wrap.querySelector('.builder-exercises').appendChild(exRow);
+    exercisesEl2.appendChild(buildSavedExRow(exerciseId, displayName, sets, target));
 
     movementSelect.value = '';
     equipmentSelect.innerHTML = '<option value="">Equipment…</option>';
@@ -1358,9 +1395,26 @@ async function saveBuilderProgram(){
   if(!structure.length){ builderStatusEl.textContent = 'Add at least one phase.'; return; }
 
   builderStatusEl.textContent = 'Saving…';
-  const { error } = await sb.from('programs').insert({ name, structure, set_presets: {}, is_active: false });
+  let error;
+  if(builderEditingProgramId){
+    ({ error } = await sb.from('programs').update({ name, structure }).eq('id', builderEditingProgramId));
+  } else {
+    ({ error } = await sb.from('programs').insert({ name, structure, set_presets: {}, is_active: false }));
+  }
   if(error){ builderStatusEl.textContent = 'Save failed — try again.'; return; }
-  builderStatusEl.textContent = 'Program saved.';
+
+  // if we just edited the currently active program, refresh Log Workout immediately
+  if(builderEditingProgramId && ACTIVE_PROGRAM && builderEditingProgramId === ACTIVE_PROGRAM.id){
+    EXERCISES_BY_ID = await loadExercisesById();
+    ACTIVE_PROGRAM = await loadActiveProgram();
+    PROGRAM = structureToProgram(ACTIVE_PROGRAM.structure);
+    SET_PRESETS = ACTIVE_PROGRAM.set_presets || {};
+    populatePhases();
+    await populateDays();
+  }
+
+  builderStatusEl.textContent = builderEditingProgramId ? 'Changes saved.' : 'Program saved.';
+  builderEditingProgramId = null;
   await renderPrograms();
 }
 
