@@ -20,6 +20,14 @@
   let restBarRef;
   let draftRestoreDone = false;
 
+  function todayDateString(){
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  let backdateMode = $state(false);
+  let backdateDate = $state(todayDateString());
+  let backdateDurationMin = $state('');
+
   const phaseNames = $derived(appState.activeProgram ? appState.activeProgram.structure.map(p => p.name) : []);
   const dayNames = $derived(
     appState.activeProgram
@@ -28,7 +36,7 @@
   );
   const isLegDay = $derived(/leg/i.test(day));
   const increment = $derived(isLegDay ? 5 : 2.5);
-  const locked = $derived(!(workoutStartMs && !workoutEndMs));
+  const locked = $derived(backdateMode ? false : !(workoutStartMs && !workoutEndMs));
 
   function buildExercisesForDay(phaseName, dayName){
     const phaseObj = appState.activeProgram?.structure.find(p => p.name === phaseName);
@@ -117,13 +125,17 @@
     exercises[exIdx].sets.splice(setIdx, 1);
   }
   function handleCheckSet(exIdx, setIdx){
-    if(!(workoutStartMs && !workoutEndMs)){
+    if(!backdateMode && !(workoutStartMs && !workoutEndMs)){
       status = 'Start the workout to log sets.';
       return;
     }
     const set = exercises[exIdx].sets[setIdx];
     set.checked = !set.checked;
-    if(set.checked) restBarRef?.start();
+    if(set.checked && !backdateMode) restBarRef?.start();
+  }
+  function toggleBackdateMode(){
+    backdateMode = !backdateMode;
+    if(backdateMode) status = '';
   }
   function handleToggleMenu(key){
     openMenuKey = (openMenuKey === key) ? null : key;
@@ -133,10 +145,11 @@
   }
 
   function collectDraftState(){
-    // nothing worth recovering until a workout is actually running - matches
-    // restoreDraftIfAny's own guard, and avoids re-writing a stale empty
-    // draft right after a successful save resets the clock.
-    if(!phase || !day || !workoutStartMs) return null;
+    // nothing worth recovering until a workout is actually running (or a
+    // backdated entry has been switched into) - matches restoreDraftIfAny's
+    // own guard, and avoids re-writing a stale empty draft right after a
+    // successful save resets the clock.
+    if(!phase || !day || !(workoutStartMs || backdateMode)) return null;
     return {
       phase, day,
       exercises: exercises.map(ex => ({
@@ -145,6 +158,7 @@
         sets: ex.sets.map(s => ({ weight: s.weight, reps: s.reps, tag: s.tag, checked: s.checked })),
       })),
       workoutStartMs, workoutEndMs, savedAt: Date.now(),
+      backdateMode, backdateDate, backdateDurationMin,
       programId: appState.activeProgram?.id,
       programName: appState.activeProgram?.name,
     };
@@ -156,6 +170,7 @@
   // stops firing. See CONTEXT.md re: the prior data-loss incident this exists for.
   $effect(() => {
     void phase; void day; void workoutStartMs; void workoutEndMs;
+    void backdateMode; void backdateDate; void backdateDurationMin;
     JSON.stringify(exercises);
     queueDraftSave(collectDraftState);
   });
@@ -163,7 +178,7 @@
   async function restoreDraftIfAny(){
     const draft = loadDraft();
     if(!draft || !draft.exercises || !draft.exercises.length) return;
-    if(!draft.workoutStartMs) return;
+    if(!draft.workoutStartMs && !draft.backdateMode) return;
     const minutesAgo = Math.round((Date.now() - (draft.savedAt || Date.now())) / 60000);
     const label = minutesAgo <= 1 ? 'a moment ago' : `${minutesAgo} min ago`;
     const ok = confirm(`Resume unsaved workout (${draft.phase} — ${draft.day}) from ${label}?`);
@@ -188,6 +203,10 @@
       }));
     });
 
+    backdateMode = !!draft.backdateMode;
+    backdateDate = draft.backdateDate || todayDateString();
+    backdateDurationMin = draft.backdateDurationMin || '';
+
     workoutStartMs = draft.workoutStartMs;
     workoutEndMs = draft.workoutEndMs;
     if(workoutStartMs && !workoutEndMs){
@@ -201,7 +220,7 @@
       clockBtnLabel = 'Start New';
       clockEnded = true;
     }
-    status = 'Restored your in-progress workout.';
+    status = backdateMode ? 'Restored your unsaved past workout entry.' : 'Restored your in-progress workout.';
   }
 
   // Whenever the active program changes (initial login, or switching programs
@@ -254,11 +273,20 @@
       status = 'Nothing logged — fill in at least one set.';
       return;
     }
+    if(backdateMode && !backdateDate){
+      status = 'Pick a date for this workout.';
+      return;
+    }
 
     status = 'Saving...';
-    const durationMin = getWorkoutDurationMin();
+    const durationMin = backdateMode
+      ? (backdateDurationMin ? Number(backdateDurationMin) : null)
+      : getWorkoutDurationMin();
+    const dateISO = backdateMode
+      ? new Date(`${backdateDate}T12:00:00`).toISOString()
+      : new Date().toISOString();
     const entry = {
-      dateISO: new Date().toISOString(),
+      dateISO,
       phase, day, exercises: list, durationMin,
       program_id: appState.activeProgram.id,
       program_name: appState.activeProgram.name,
@@ -276,6 +304,9 @@
       clockLabel = 'Workout Timer';
       clockBtnLabel = 'Start Workout';
       clockEnded = false;
+      backdateMode = false;
+      backdateDate = todayDateString();
+      backdateDurationMin = '';
       restBarRef?.hide();
       await refreshWorkoutLogs();
     }
@@ -284,13 +315,28 @@
 
 <svelte:window onclick={() => openMenuKey = null} />
 
-<div class="clockbar">
-  <div>
-    <div class="clock-label">{clockLabel}</div>
-    <div class="clock-time">{clockTimeText}</div>
+{#if backdateMode}
+  <div class="backdate-bar">
+    <div class="select-group">
+      <div class="select-label">Date</div>
+      <input type="date" class="text-input" bind:value={backdateDate} max={todayDateString()} />
+    </div>
+    <div class="select-group">
+      <div class="select-label">Duration (min)</div>
+      <input type="number" class="text-input" bind:value={backdateDurationMin} placeholder="e.g. 60" min="0" />
+    </div>
+    <button class="link-btn muted" onclick={toggleBackdateMode}>Cancel — log a live workout instead</button>
   </div>
-  <button class:ended={clockEnded} onclick={onClockBtnClick}>{clockBtnLabel}</button>
-</div>
+{:else}
+  <div class="clockbar">
+    <div>
+      <div class="clock-label">{clockLabel}</div>
+      <div class="clock-time">{clockTimeText}</div>
+    </div>
+    <button class:ended={clockEnded} onclick={onClockBtnClick}>{clockBtnLabel}</button>
+  </div>
+  <button class="link-btn muted backdate-toggle" onclick={toggleBackdateMode}>Log a past workout instead</button>
+{/if}
 
 <div class="select-group">
   <div class="select-label">Phase</div>

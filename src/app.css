@@ -226,6 +226,9 @@
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .clockbar button.ended{color:var(--muted);border-color:var(--line);}
+  .backdate-toggle{margin-bottom:20px;}
+  .backdate-bar{margin-bottom:8px;}
+  .backdate-bar .select-group:last-of-type{margin-bottom:10px;}
 
   .suggestion{font-size:13.5px;color:var(--accent);margin-top:4px;opacity:0.9;}
 
