@@ -62,7 +62,7 @@ From reviewing uploaded Phase 1/Phase 2 logs earlier in this project:
 
 ## The app: what's built and why
 
-`workout-logger.html` — single-file HTML/CSS/JS, no build step, no external
+`index.html` — single-file HTML/CSS/JS, no build step, no external
 dependencies except what's loaded at runtime.
 
 ### Data model

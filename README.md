@@ -1,7 +1,7 @@
 # Workout Logger — Handoff to Claude Code
 
 ## What's here
-- `workout-logger.html` — self-contained workout logging app (HTML/CSS/JS, no build step).
+- `index.html` — self-contained workout logging app (HTML/CSS/JS, no build step).
   Currently uses `localStorage` for persistence (works standalone, no backend required).
 - `progressive-overload-program.md` — the 12-week program this app is built around.
 
