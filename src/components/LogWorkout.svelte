@@ -100,7 +100,7 @@
           checked: false,
         });
       }
-      return { exerciseId: ex.exerciseId, name, target: ex.target, sets, collapsed: true, activeTab: 'log' };
+      return { exerciseId: ex.exerciseId, name, target: ex.target, restSec: ex.restSec || null, sets, collapsed: true, activeTab: 'log' };
     });
   }
 
@@ -200,6 +200,10 @@
     };
     openMenuKey = null;
   }
+  function handleRemoveExercise(exIdx){
+    exercises.splice(exIdx, 1);
+    openMenuKey = null;
+  }
   function handleCheckSet(exIdx, setIdx){
     if(!backdateMode && !(workoutStartMs && !workoutEndMs)){
       status = 'Start the workout to log sets.';
@@ -207,7 +211,7 @@
     }
     const set = exercises[exIdx].sets[setIdx];
     set.checked = !set.checked;
-    if(set.checked && !backdateMode) restBarRef?.start();
+    if(set.checked && !backdateMode) restBarRef?.start(exercises[exIdx].restSec);
   }
   function toggleBackdateMode(){
     backdateMode = !backdateMode;
@@ -216,8 +220,8 @@
   function handleToggleMenu(key){
     openMenuKey = (openMenuKey === key) ? null : key;
   }
-  function handleAutoStartRest(){
-    restBarRef?.start();
+  function handleAutoStartRest(restSec){
+    restBarRef?.start(restSec);
   }
 
   function collectDraftState(){
@@ -348,9 +352,16 @@
   async function handleSave(){
     const list = [];
     exercises.forEach(ex => {
+      // Live workouts: only sets actually checked off count as done - a set
+      // with prefilled preset weight/reps that was never checked wasn't
+      // completed, and shouldn't be saved as if it were. Backdated entries
+      // don't have that "did I get to it" question - typing the data in IS
+      // the record, so those still save on weight/reps being filled in
+      // (requiring a checkbox tap per set there just risks silently losing
+      // typed data if one gets missed).
       const setData = ex.sets
-        .map((s, i) => ({ set: String(i + 1), weight: String(s.weight).trim(), reps: String(s.reps).trim(), tag: s.tag || 'working' }))
-        .filter(s => s.weight || s.reps);
+        .filter(s => backdateMode ? (s.weight || s.reps) : s.checked)
+        .map((s, i) => ({ set: String(i + 1), weight: String(s.weight).trim(), reps: String(s.reps).trim(), tag: s.tag || 'working' }));
       if(setData.length) list.push({ exerciseId: ex.exerciseId, name: ex.name, sets: setData });
     });
 
@@ -458,6 +469,7 @@
         onAddSet={() => handleAddSet(exIdx)}
         onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
         onSwapExercise={(movementId, equipmentId) => handleSwapExercise(exIdx, movementId, equipmentId)}
+        onRemoveExercise={() => handleRemoveExercise(exIdx)}
       />
     {/each}
   </div>

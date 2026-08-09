@@ -4,9 +4,9 @@
 
   let { day, movements, equipment, movementEquipment } = $props();
 
-  async function handleAdd(movementId, equipmentId, sets, target){
+  async function handleAdd(movementId, equipmentId, sets, target, restSec){
     const { exerciseId, displayName } = await resolveOrCreateExercise(movementId, equipmentId, movements, equipment);
-    day.exercises.push({ exerciseId, displayName, sets: parseInt(sets, 10), target });
+    day.exercises.push({ exerciseId, displayName, sets: parseInt(sets, 10), target, restSec: restSec || null });
   }
   function removeExercise(idx){
     day.exercises.splice(idx, 1);
@@ -19,7 +19,7 @@
   <div class="builder-exercises">
     {#each day.exercises as ex, idx (idx)}
       <div class="builder-ex-row saved">
-        <span class="ex-summary">{ex.displayName} — {ex.sets} sets · {ex.target || 'no target set'}</span>
+        <span class="ex-summary">{ex.displayName} — {ex.sets} sets · {ex.target || 'no target set'} · rest {ex.restSec ? `${ex.restSec}s` : 'default'}</span>
         <button type="button" class="link-btn danger" onclick={() => removeExercise(idx)}>Remove</button>
       </div>
     {/each}

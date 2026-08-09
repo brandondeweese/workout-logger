@@ -17,6 +17,7 @@
             displayName: appState.exercisesById[ex.exerciseId] || '(unknown exercise)',
             sets: ex.sets,
             target: ex.target,
+            restSec: ex.restSec || null,
           })),
         })),
       }));
@@ -65,7 +66,7 @@
         if(!day.exercises.length){ statusMsg = `Day "${dayName}" needs at least one exercise.`; return; }
         days.push({
           name: dayName,
-          exercises: day.exercises.map(ex => ({ exerciseId: ex.exerciseId, sets: ex.sets, target: ex.target })),
+          exercises: day.exercises.map(ex => ({ exerciseId: ex.exerciseId, sets: ex.sets, target: ex.target, restSec: ex.restSec || null })),
         });
       }
       if(!days.length){ statusMsg = `Phase "${phaseName}" needs at least one day.`; return; }

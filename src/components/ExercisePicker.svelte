@@ -5,6 +5,7 @@
   let equipmentId = $state('');
   let sets = $state('');
   let target = $state('');
+  let restSec = $state('');
   let adding = $state(false);
 
   const equipmentOptions = $derived(movementId ? (movementEquipment[movementId] || []) : []);
@@ -19,9 +20,9 @@
       return;
     }
     adding = true;
-    await onAdd(parseInt(movementId, 10), parseInt(equipmentId, 10), sets, target);
+    await onAdd(parseInt(movementId, 10), parseInt(equipmentId, 10), sets, target, restSec ? parseInt(restSec, 10) : null);
     adding = false;
-    movementId = ''; equipmentId = ''; sets = ''; target = '';
+    movementId = ''; equipmentId = ''; sets = ''; target = ''; restSec = '';
   }
 </script>
 
@@ -36,5 +37,6 @@
   </select>
   <input type="text" class="text-input" placeholder="Sets" inputmode="numeric" style="max-width:70px;" bind:value={sets}>
   <input type="text" class="text-input" placeholder="Target (e.g. 8-10 reps)" bind:value={target}>
+  <input type="text" class="text-input" placeholder="Rest (sec)" inputmode="numeric" style="max-width:90px;" bind:value={restSec}>
   <button type="button" class="link-btn" disabled={adding} onclick={handleAdd}>{adding ? '…' : '+ Add'}</button>
 </div>

@@ -18,7 +18,13 @@
     onAddSet,       // () => void
     onRemoveSet,    // (setIdx) => void
     onSwapExercise, // (movementId, equipmentId) => void
+    onRemoveExercise, // () => void
   } = $props();
+
+  function removeExercise(e){
+    e.stopPropagation();
+    onRemoveExercise();
+  }
 
   let swapMovementId = $state('');
   let swapEquipmentId = $state('');
@@ -91,7 +97,8 @@
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
     <div class="ex-right">
-      <button type="button" class="link-btn muted swap-trigger" onclick={openSwapPanel}>Swap</button>
+      <button type="button" class="link-btn swap-trigger" onclick={openSwapPanel}>Swap</button>
+      <button type="button" class="link-btn swap-trigger danger-trigger" onclick={removeExercise}>Remove</button>
       <div class="tally">{doneCount}/{totalCount} sets</div>
       <span class="chevron">&#9662;</span>
     </div>
@@ -141,7 +148,7 @@
             onTagSelect={(tag) => { onSetField(setIdx, 'tag', tag); onToggleMenu(null); }}
             onCheck={() => onCheckSet(setIdx)}
             onRemove={() => onRemoveSet(setIdx)}
-            {onAutoStartRest}
+            onAutoStartRest={() => onAutoStartRest(exercise.restSec)}
           />
         {/each}
       </div>

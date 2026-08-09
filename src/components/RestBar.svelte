@@ -7,6 +7,7 @@
   let running = $state(false);
   let toggleLabel = $state('Pause');
   let interval = null;
+  let lastRestSec = null;
 
   const timeText = $derived.by(() => {
     const m = Math.floor(remaining / 60), s = remaining % 60;
@@ -15,9 +16,9 @@
 
   function restDefaultForPhase(){
     const p = phase || '';
-    if(/Phase 1/.test(p)) return 75;
-    if(/Phase 2/.test(p)) return 150;
-    if(/Phase 3/.test(p)) return 210;
+    if(/Phase 1/.test(p)) return 60;
+    if(/Phase 2/.test(p)) return 90;
+    if(/Phase 3/.test(p)) return 120;
     return 60;
   }
 
@@ -47,8 +48,9 @@
     }
   }
 
-  export function start(){
-    remaining = restDefaultForPhase();
+  export function start(restSec){
+    lastRestSec = restSec;
+    remaining = (restSec != null && restSec > 0) ? restSec : restDefaultForPhase();
     flash = false;
     visible = true;
     clearInterval(interval);
@@ -63,7 +65,7 @@
   }
 
   function onToggle(){
-    if(toggleLabel === 'Restart'){ start(); return; }
+    if(toggleLabel === 'Restart'){ start(lastRestSec); return; }
     if(running){
       clearInterval(interval);
       running = false;
