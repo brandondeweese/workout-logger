@@ -374,6 +374,34 @@ the way continuous cardio does) rather than a sign the formula is
 under-scaling. No genuinely all-day-cardio reference day exists yet to
 sanity-check the top end of the curve.
 
+**Training Load (muscular/mechanical, separate from cardio Strain above).**
+Strain is entirely HR-derived, so it can't see resistance-training fatigue -
+a heavy lifting session spikes HR in bursts between sets but doesn't sustain
+elevated %HRR the way cardio does, so Strain reads "Moderate" even on brutal
+lifting days. Training Load fills that gap using data that already exists in
+`workout_logs` (no HealthKit input needed): tonnage (weight x reps, warmup-
+tagged sets excluded) attributed to every body part a movement maps to via
+`movement_body_parts` (full credit to each mapped part, not split - a bench
+press set counts fully toward chest AND triceps).
+
+Two new DB objects (migration `add_training_load_by_body_part`):
+- View `workout_body_part_volume` - one row per (date, body_part): summed
+  tonnage + working-set count, `security_invoker=true` so it respects
+  whatever RLS the underlying tables have.
+- Function `body_part_load_status(as_of date default current_date)` - the
+  acute:chronic workload ratio (ACWR) per body part: acute = trailing 7-day
+  tonnage sum, chronic = trailing 28-day tonnage sum normalized to a weekly
+  rate (/4). Status bands are the standard sports-science ACWR convention
+  (Gabbett et al.): <0.8 undertrained, 0.8-1.3 optimal, 1.3-1.5 caution,
+  >1.5 high risk. Only returns body parts with tonnage in the trailing 28
+  days. Called via `sb.rpc('body_part_load_status', {as_of})` from
+  `loadBodyPartLoadStatus()` in `db.js`.
+
+Health tab shows this as a "Training Load" section below the vital-card
+grid, re-queried with `as_of = current.date` whenever the day-nav selection
+changes - so paging back through history shows what load status looked like
+as of that day, not just today's.
+
 **HRV won't match Bevel's number, and that's expected, not a bug.** Apple
 Health's HRV metric is specifically SDNN (the only HRV type HealthKit
 exposes publicly); Bevel (and most recovery-focused wearables) likely use

@@ -379,3 +379,13 @@
     position:absolute;left:50%;width:14px;height:14px;border-radius:50%;
     background:var(--bg);border:2.5px solid;transform:translate(-50%,50%);
   }
+
+  .load-list{display:flex;flex-direction:column;gap:14px;}
+  .load-row{background:#171B21;border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+  .load-row-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .load-row-name{font-size:14.5px;font-weight:550;}
+  .load-row-status{font-size:12.5px;font-weight:550;}
+  .load-bar-track{position:relative;height:8px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:visible;}
+  .load-bar-fill{position:absolute;top:0;bottom:0;left:0;border-radius:999px;}
+  .load-bar-marker{position:absolute;top:-2px;bottom:-2px;width:1px;background:rgba(255,255,255,0.18);}
+  .load-row-meta{font-size:11.5px;color:var(--muted);margin-top:8px;}
