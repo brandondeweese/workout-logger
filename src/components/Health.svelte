@@ -5,6 +5,7 @@
 
   let { active } = $props();
   let rows = $state([]);
+  let selectedDate = $state(null);
 
   // Health stays mounted (never unmounted) so it can't rely on onMount alone -
   // refetch whenever this tab becomes visible, matching History's pattern.
@@ -16,8 +17,35 @@
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
-  const today = $derived(rows.find(r => r.date === todayDateString()));
-  const pastRows = $derived(rows.filter(r => r.date !== todayDateString()));
+
+  const sortedRows = $derived([...rows].sort((a, b) => a.date.localeCompare(b.date)));
+
+  // Default to today if it has a row, else the most recent day we have -
+  // only runs once rows are loaded and only if nothing's been picked yet, so
+  // it doesn't yank the user back to "today" every time rows refetch after
+  // they've navigated elsewhere.
+  $effect(() => {
+    if(selectedDate == null && sortedRows.length){
+      const t = todayDateString();
+      selectedDate = sortedRows.some(r => r.date === t) ? t : sortedRows[sortedRows.length - 1].date;
+    }
+  });
+
+  const currentIndex = $derived(selectedDate == null ? -1 : sortedRows.findIndex(r => r.date === selectedDate));
+  const current = $derived(currentIndex >= 0 ? sortedRows[currentIndex] : null);
+  const hasPrev = $derived(currentIndex > 0);
+  const hasNext = $derived(currentIndex >= 0 && currentIndex < sortedRows.length - 1);
+  function goPrev(){ if(hasPrev) selectedDate = sortedRows[currentIndex - 1].date; }
+  function goNext(){ if(hasNext) selectedDate = sortedRows[currentIndex + 1].date; }
+
+  const heroLabel = $derived.by(() => {
+    if(selectedDate == null) return '';
+    if(selectedDate === todayDateString()) return 'Today';
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const ys = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+    return selectedDate === ys ? 'Yesterday' : '';
+  });
 
   function fmtDate(dateStr){
     // dateStr is a plain 'YYYY-MM-DD' - parse as local, not UTC, or it can
@@ -127,11 +155,11 @@
       const hrvBaselineCount = others.filter(r => (hrvFromDay ? r.hrv_ms : r.overnight_hrv_ms) != null).length;
       const rhrBaselineCount = others.filter(r => (rhrFromDay ? r.resting_hr_bpm : r.overnight_hr_avg_bpm) != null).length;
       if(hrvBaselineCount < 2 || rhrBaselineCount < 2){
-        missing.push(`enough history of the same type to build a baseline (today is ${hrvFromDay ? 'day-level' : 'overnight-only'} HRV / ${rhrFromDay ? 'day-level' : 'overnight-only'} RHR - needs 2+ other days of that same kind)`);
+        missing.push(`enough history of the same type to build a baseline (this day is ${hrvFromDay ? 'day-level' : 'overnight-only'} HRV / ${rhrFromDay ? 'day-level' : 'overnight-only'} RHR - needs 2+ other days of that same kind)`);
       }
     }
     if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
-    if(!hasDip(row)) missing.push("HR dip (needs yesterday's resting HR + an overnight reading)");
+    if(!hasDip(row)) missing.push("HR dip (needs the prior day's resting HR + an overnight reading)");
     return missing;
   }
   function sleepMissingFactors(row){
@@ -145,136 +173,76 @@
 </script>
 
 <div class="today-hero">
-  <div class="today-hero-label">Today</div>
-  <div class="today-hero-date">{fmtDate(todayDateString())}</div>
+  <div class="day-nav">
+    <button type="button" class="day-nav-btn" onclick={goPrev} disabled={!hasPrev}>&#8249;</button>
+    <div class="day-nav-label">
+      {#if heroLabel}<div class="today-hero-label">{heroLabel}</div>{/if}
+      <div class="today-hero-date">{selectedDate ? fmtDate(selectedDate) : ''}</div>
+    </div>
+    <button type="button" class="day-nav-btn" onclick={goNext} disabled={!hasNext}>&#8250;</button>
+  </div>
 
-  {#if today}
-    {@const rr = today.respiratory_rate_avg != null ? personalZGauge(today, 'respiratory_rate_avg', false) : null}
-    {@const rhrField = effSourceField(today, 'resting_hr_bpm', 'overnight_hr_avg_bpm')}
-    {@const rhr = rhrField ? personalZGauge(today, rhrField, false) : null}
-    {@const hrvField = effSourceField(today, 'hrv_ms', 'overnight_hrv_ms')}
-    {@const hrv = hrvField ? personalZGauge(today, hrvField, true) : null}
-    {@const temp = rangeGauge(cToF(today.wrist_temp_c), 90, 102, 93, 99.5)}
-    {@const sleepDur = rangeGauge(today.sleep_total_min, 240, 600, 360, 540)}
-    {@const spo2 = rangeGauge(today.overnight_spo2_avg_pct, 88, 100, 95, 100)}
+  {#if current}
+    {@const rr = current.respiratory_rate_avg != null ? personalZGauge(current, 'respiratory_rate_avg', false) : null}
+    {@const rhrField = effSourceField(current, 'resting_hr_bpm', 'overnight_hr_avg_bpm')}
+    {@const rhr = rhrField ? personalZGauge(current, rhrField, false) : null}
+    {@const hrvField = effSourceField(current, 'hrv_ms', 'overnight_hrv_ms')}
+    {@const hrv = hrvField ? personalZGauge(current, hrvField, true) : null}
+    {@const temp = rangeGauge(cToF(current.wrist_temp_c), 90, 102, 93, 99.5)}
+    {@const sleepDur = rangeGauge(current.sleep_total_min, 240, 600, 360, 540)}
+    {@const spo2 = rangeGauge(current.overnight_spo2_avg_pct, 88, 100, 95, 100)}
 
-    {@const recMissing = recoveryMissingFactors(today)}
-    {@const sleepMissing = sleepMissingFactors(today)}
+    {@const recMissing = recoveryMissingFactors(current)}
+    {@const sleepMissing = sleepMissingFactors(current)}
     <div class="today-rings">
       <div class="ring-col">
-        <RingStat pct={today.recovery_pct} label="Recovery" mode="recovery" />
+        <RingStat pct={current.recovery_pct} label="Recovery" mode="recovery" />
         {#if recMissing.length}
           <div class="missing-note">Missing: {recMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={today.sleep_score} label="Sleep" mode="accent" />
+        <RingStat pct={current.sleep_score} label="Sleep" mode="accent" />
         {#if sleepMissing.length}
           <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={today.strain_score} label="Strain" mode="accent" maxScale={21} unit="" decimals={1} />
-        {#if today.strain_score == null}
-          <div class="missing-note">Missing: continuous heart rate for today (needs daily_hr_hourly)</div>
+        <RingStat pct={current.strain_score} label="Strain" mode="accent" maxScale={21} unit="" decimals={1} />
+        {#if current.strain_score == null}
+          <div class="missing-note">Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
         {/if}
       </div>
     </div>
 
     <div class="vital-section-title">Health Monitor</div>
     <div class="vital-grid">
-      <VitalCard icon="≈" label="RR" value={today.respiratory_rate_avg != null ? round1(today.respiratory_rate_avg) : '—'} unit="rpm"
+      <VitalCard icon="≈" label="RR" value={current.respiratory_rate_avg != null ? round1(current.respiratory_rate_avg) : '—'} unit="rpm"
         gaugePct={rr?.pct} gaugeColor={rr?.color} status={rr?.status} statusColor={rr?.color} />
-      <VitalCard icon="♥" label="RHR" value={(today.overnight_hr_avg_bpm ?? today.resting_hr_bpm) != null ? round1(today.overnight_hr_avg_bpm ?? today.resting_hr_bpm) : '—'} unit="bpm"
+      <VitalCard icon="♥" label="RHR" value={(current.overnight_hr_avg_bpm ?? current.resting_hr_bpm) != null ? round1(current.overnight_hr_avg_bpm ?? current.resting_hr_bpm) : '—'} unit="bpm"
         gaugePct={rhr?.pct} gaugeColor={rhr?.color} status={rhr?.status} statusColor={rhr?.color} />
-      <VitalCard icon="∿" label="HRV" value={(today.overnight_hrv_ms ?? today.hrv_ms) != null ? round1(today.overnight_hrv_ms ?? today.hrv_ms) : '—'} unit="ms"
+      <VitalCard icon="∿" label="HRV" value={(current.overnight_hrv_ms ?? current.hrv_ms) != null ? round1(current.overnight_hrv_ms ?? current.hrv_ms) : '—'} unit="ms"
         gaugePct={hrv?.pct} gaugeColor={hrv?.color} status={hrv?.status} statusColor={hrv?.color} />
-      <VitalCard icon="◉" label="SpO2" value={today.overnight_spo2_avg_pct != null ? round1(today.overnight_spo2_avg_pct) : '—'} unit={today.overnight_spo2_avg_pct != null ? '%' : ''}
+      <VitalCard icon="◉" label="SpO2" value={current.overnight_spo2_avg_pct != null ? round1(current.overnight_spo2_avg_pct) : '—'} unit={current.overnight_spo2_avg_pct != null ? '%' : ''}
         gaugePct={spo2?.pct} gaugeColor={spo2?.color} status={spo2?.status} statusColor={spo2?.color} />
-      <VitalCard icon="◐" label="Temp" value={fmtTempF(today.wrist_temp_c) !== '—' ? round1(cToF(today.wrist_temp_c)) : '—'} unit="°F"
+      <VitalCard icon="◐" label="Temp" value={fmtTempF(current.wrist_temp_c) !== '—' ? round1(cToF(current.wrist_temp_c)) : '—'} unit="°F"
         gaugePct={temp?.pct} gaugeColor={temp?.color} status={temp?.status} statusColor={temp?.color} />
-      <VitalCard icon="⏾" label="Sleep" value={fmtHM(today.sleep_total_min)} unit=""
+      <VitalCard icon="⏾" label="Sleep" value={fmtHM(current.sleep_total_min)} unit=""
         gaugePct={sleepDur?.pct} gaugeColor={sleepDur?.color} status={sleepDur?.status} statusColor={sleepDur?.color} />
     </div>
     <div class="today-stats" style="margin-top:16px;">
       <div class="today-stat">
         <div class="today-stat-label">Sleep efficiency</div>
-        <div class="today-stat-value">{today.sleep_efficiency_pct != null ? `${round1(today.sleep_efficiency_pct)}%` : '—'}</div>
+        <div class="today-stat-value">{current.sleep_efficiency_pct != null ? `${round1(current.sleep_efficiency_pct)}%` : '—'}</div>
       </div>
       <div class="today-stat">
         <div class="today-stat-label">Steps</div>
-        <div class="today-stat-value">{today.step_count != null ? today.step_count.toLocaleString() : '—'}</div>
+        <div class="today-stat-value">{current.step_count != null ? current.step_count.toLocaleString() : '—'}</div>
       </div>
     </div>
+  {:else if selectedDate}
+    <div class="today-empty">No data for this day.</div>
   {:else}
-    <div class="today-empty">No data for today yet.</div>
+    <div class="today-empty">No health data yet.</div>
   {/if}
 </div>
-
-{#if !pastRows.length}
-  <div class="empty">No earlier health data yet.</div>
-{:else}
-  {#each pastRows as r (r.date)}
-    {@const recMissing = recoveryMissingFactors(r)}
-    {@const sleepMissing = sleepMissingFactors(r)}
-    <div class="hist-entry">
-      <div class="hist-date">{fmtDate(r.date)}</div>
-      <div class="prog-row">
-        <div class="prog-date">Recovery</div>
-        <div class="prog-sets">{r.recovery_pct != null ? `${round1(r.recovery_pct)}%` : '—'}</div>
-      </div>
-      {#if r.recovery_pct != null && recMissing.length}
-        <div class="missing-note">Missing: {recMissing.join(', ')}</div>
-      {/if}
-      <div class="prog-row">
-        <div class="prog-date">Sleep score</div>
-        <div class="prog-sets">{r.sleep_score != null ? `${round1(r.sleep_score)}%` : '—'}</div>
-      </div>
-      {#if r.sleep_score != null && sleepMissing.length}
-        <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
-      {/if}
-      {#if r.strain_score != null}
-        <div class="prog-row">
-          <div class="prog-date">Strain</div>
-          <div class="prog-sets">{round1(r.strain_score)}</div>
-        </div>
-      {/if}
-      <div class="prog-row">
-        <div class="prog-date">Sleep duration</div>
-        <div class="prog-sets">{fmtHM(r.sleep_total_min)}{r.sleep_efficiency_pct != null ? ` · ${round1(r.sleep_efficiency_pct)}% efficiency` : ''}</div>
-      </div>
-      <div class="prog-row">
-        <div class="prog-date">HRV (day avg)</div>
-        <div class="prog-sets">{r.hrv_ms != null ? `${round1(r.hrv_ms)} ms` : '—'}{r.overnight_hrv_ms != null ? ` · ${round1(r.overnight_hrv_ms)} ms overnight` : ''}</div>
-      </div>
-      <div class="prog-row">
-        <div class="prog-date">Resting HR</div>
-        <div class="prog-sets">{r.resting_hr_bpm != null ? `${round1(r.resting_hr_bpm)} bpm` : '—'}{r.overnight_hr_min_bpm != null ? ` · ${round1(r.overnight_hr_min_bpm)} bpm min overnight` : ''}</div>
-      </div>
-      {#if r.step_count != null}
-        <div class="prog-row">
-          <div class="prog-date">Steps</div>
-          <div class="prog-sets">{r.step_count.toLocaleString()}</div>
-        </div>
-      {/if}
-      {#if r.respiratory_rate_avg != null}
-        <div class="prog-row">
-          <div class="prog-date">Respiratory rate</div>
-          <div class="prog-sets">{round1(r.respiratory_rate_avg)} br/min</div>
-        </div>
-      {/if}
-      {#if r.wrist_temp_c != null}
-        <div class="prog-row">
-          <div class="prog-date">Wrist temp</div>
-          <div class="prog-sets">{fmtTempF(r.wrist_temp_c)}</div>
-        </div>
-      {/if}
-      {#if r.overnight_spo2_avg_pct != null}
-        <div class="prog-row">
-          <div class="prog-date">SpO2</div>
-          <div class="prog-sets">{round1(r.overnight_spo2_avg_pct)}%</div>
-        </div>
-      {/if}
-    </div>
-  {/each}
-{/if}
