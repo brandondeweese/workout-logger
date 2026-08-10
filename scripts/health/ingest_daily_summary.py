@@ -14,17 +14,18 @@ into sessions by gap detection (>3h gap = new session) and assigns each
 session to the WAKE date (the morning after), matching how recovery apps
 date a night's sleep by the day you experience it.
 
-Computes recovery_pct (HRV/RHR vs. the baseline formed by whatever days are
-in THIS document - noisy with few days, firms up as more accumulate; a
-proper rolling window would query existing rows too) and sleep_score
-(duration + efficiency + deep/REM proportion). Does NOT compute strain -
-that needs continuous/intraday heart rate, which this document shape
-doesn't carry (see ingest_sleep_session_detail.py's overnight heart rate
-for a partial substitute, or wait for a continuous all-day HR pull).
+This script only writes raw metrics - it does NOT compute recovery_pct or
+sleep_score itself. A DB trigger (compute_health_scores, see migration
+add_score_computation_trigger) recomputes both automatically on every
+insert/update against a proper leave-one-out baseline over all rows, so
+scoring stays correct regardless of which ingestion path wrote a given row
+(this script, ingest_sleep_session_detail.py, or the sleep-vitals-export
+skill running independently). Does NOT compute strain - that needs
+continuous/intraday heart rate, which no current source reliably provides.
 
 Usage: python3 ingest_daily_summary.py <path_to_json>
 """
-import json, sys, statistics, urllib.request, urllib.error
+import json, sys, urllib.request, urllib.error
 from datetime import datetime, timedelta
 
 SUPABASE_URL = "https://rrqljyhfjoyancgfefcb.supabase.co/rest/v1"
@@ -91,13 +92,6 @@ def aggregate_sleep_sessions(samples):
         }
     return result
 
-def compute_sleep_score(r):
-    duration_component = min(r['sleep_total_min'] / 480, 1) * 50
-    efficiency_component = (r.get('sleep_efficiency_pct') or 0) / 100 * 30
-    quality_ratio = (r['sleep_deep_min'] + r['sleep_rem_min']) / r['sleep_total_min']
-    quality_component = min(quality_ratio / 0.40, 1) * 20
-    return round(duration_component + efficiency_component + quality_component, 1)
-
 def build_rows(data):
     rows = {}
     if 'heartRateVariabilitySDNN' in data:
@@ -116,22 +110,14 @@ def build_rows(data):
         for d, sleep_fields in aggregate_sleep_sessions(data['sleepAnalysis']['samples']).items():
             rows.setdefault(d, {}).update(sleep_fields)
 
-    all_hrv = [r['hrv_ms'] for r in rows.values() if 'hrv_ms' in r]
-    all_rhr = [r['resting_hr_bpm'] for r in rows.values() if 'resting_hr_bpm' in r]
-    if len(all_hrv) >= 2:
-        hrv_mean, hrv_sd = statistics.mean(all_hrv), statistics.stdev(all_hrv)
-        rhr_mean, rhr_sd = statistics.mean(all_rhr), statistics.stdev(all_rhr)
-        for r in rows.values():
-            if 'hrv_ms' in r and 'resting_hr_bpm' in r:
-                z_hrv = (r['hrv_ms'] - hrv_mean) / hrv_sd if hrv_sd else 0
-                z_rhr = (r['resting_hr_bpm'] - rhr_mean) / rhr_sd if rhr_sd else 0
-                recovery = 50 + 20 * z_hrv - 20 * z_rhr
-                r['recovery_pct'] = round(max(0, min(100, recovery)), 1)
-
-    for r in rows.values():
-        if r.get('sleep_total_min'):
-            r['sleep_score'] = compute_sleep_score(r)
-
+    # recovery_pct/sleep_score are NOT computed here - a DB trigger
+    # (compute_health_scores, see migration add_score_computation_trigger)
+    # recomputes both automatically on every insert/update, using a proper
+    # leave-one-out baseline against all other rows. Computing it here too
+    # would just be duplicate logic that can drift from the trigger's -
+    # exactly what happened before this migration existed, when a different
+    # ingestion path (the sleep-vitals-export skill) wrote rows with no
+    # score at all because it didn't know this script's formula.
     return rows
 
 if __name__ == '__main__':

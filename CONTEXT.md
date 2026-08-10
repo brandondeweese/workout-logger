@@ -214,10 +214,17 @@ this wasn't nailed down explicitly with the user.
 
 A `health_metrics` table (one row per calendar day, keyed by `date`, RLS
 matching the rest of the schema) was added to hold Apple Health data pulled
-via Claude iOS (which has HealthKit access granted) and pasted into a chat
-session with Supabase access - **not** an automated Skill yet, just manual
-request/response for now. Two reusable ingestion scripts live in
-`scripts/health/`, both idempotent upserts keyed by date so they compose:
+via Claude iOS (which has HealthKit access granted). This started as manual
+request/response (paste JSON into a chat with Supabase access), but as of
+2026-08-10 a real Skill ("sleep-vitals-export") is running independently in
+a separate chat session and pushing overnight-vitals rows on its own -
+`raw_payload.source` on a row tells you which path it came from. That
+skill's own document shape isn't fully known here (only the resulting rows
+are visible), so when its shape and this repo's ingestion scripts drift,
+trust the skill/DB as ground truth and update the scripts to match, not the
+other way around. Two reusable ingestion scripts also live in
+`scripts/health/` for manual pulls, both idempotent upserts keyed by date so
+they compose with whatever the skill already wrote:
 
 - `ingest_daily_summary.py` - the multi-day shape: day-average HRV/resting
   HR, daily step-count sums, and raw sleep-stage interval samples across a
@@ -234,11 +241,30 @@ Both require a fresh Supabase auth access_token saved at `/tmp/sp_token.txt`
 (tokens expire ~hourly - re-auth via the `/auth/v1/token?grant_type=password`
 endpoint with the anon key + user credentials).
 
-**Computed scores**: `recovery_pct` (HRV/resting-HR z-scored against the
-mean/stdev of whatever days exist so far - genuinely noisy until ~2+ weeks
-of data accumulate; needs a proper rolling-window baseline eventually, not
-all-time) and `sleep_score` (duration vs. 8h target 50% + sleep efficiency
-30% + deep/REM proportion 20%).
+**Computed scores are server-side now, not in the ingestion scripts.** A
+Postgres trigger (`compute_health_scores`, `before insert or update`,
+migration `add_score_computation_trigger`) recomputes `recovery_pct` and
+`sleep_score` on every write to `health_metrics`, regardless of which path
+wrote the row - this matters because the ingestion scripts here aren't the
+only writer anymore (see the sleep-vitals-export skill note above), and a
+Python-side-only computation meant rows from other writers silently got no
+score at all, which is exactly what happened the first time the skill wrote
+a row. The scripts no longer compute either score themselves.
+
+- `recovery_pct`: HRV and resting HR (day-average if present, else the
+  overnight-vitals columns via `coalesce`) z-scored against a **leave-one-out
+  baseline** - mean/stdev of every *other* row that has a value, recomputed
+  fresh each time. Still genuinely noisy until ~2+ weeks of data accumulate,
+  and using ALL history rather than a rolling ~30-day window will eventually
+  need revisiting as the table grows.
+- `sleep_score`: duration vs. 8h target (50%) + sleep efficiency (30%) +
+  deep/REM proportion (20%). Only computed when stage-level data
+  (`sleep_total_min`/`sleep_deep_min`/`sleep_rem_min`) is present - a row
+  with only overnight vitals (no stage breakdown) keeps `sleep_score` null.
+
+If you add a new ingestion path or change the formula, edit the trigger
+function directly (`compute_health_scores`) rather than re-adding scoring
+logic to a script - that's the whole point of moving it server-side.
 
 **Strain is intentionally NOT computed right now** (`strain_score` column
 exists but is left null). A first attempt used a step-count-only proxy and

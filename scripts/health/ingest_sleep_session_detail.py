@@ -5,6 +5,7 @@ Ingests the "sleep session detail" HealthKit document shape into health_metrics:
     "heartRateVariabilitySDNN": {samples:[{t,value}], summary:{average,max,min,total_samples}},
     "respiratoryRate": {summary:{average,max,min,total_samples}},
     "heartRate": {summary:{average,max,min,total_samples}},
+    "oxygenSaturation": {samples:[{t,value}], summary:{average,max,min,total_samples}},
     "appleSleepingWristTemperature": {samples:[{start,end,value}]},
     "sleepAnalysis": {samples:[{start,end,category}]}   -- optional, raw stage intervals
   }
@@ -14,8 +15,9 @@ covers day-average HRV/resting HR/step count across a date range. Both
 upsert into the same health_metrics table, keyed by date (the wake-up
 morning), so a day's row can be built from either or both shapes as they
 come in - this one only touches the overnight-vitals columns it's given,
-leaving whatever a prior ingestion already set alone (unless this document
-also supplies stage samples, in which case it recomputes sleep_score too).
+leaving whatever a prior ingestion already set alone. Doesn't compute
+recovery_pct or sleep_score itself - see ingest_daily_summary.py's
+docstring for why (a DB trigger handles it now, regardless of writer).
 
 Usage: python3 ingest_sleep_session_detail.py <path_to_json>
 """
@@ -61,13 +63,6 @@ def aggregate_sleep_stages(samples):
         'sleep_efficiency_pct': round(100 * total_sleep / time_in_bed, 1) if time_in_bed else None,
     }
 
-def compute_sleep_score(sleep_total_min, sleep_efficiency_pct, deep_min, rem_min):
-    duration_component = min(sleep_total_min / 480, 1) * 50
-    efficiency_component = (sleep_efficiency_pct or 0) / 100 * 30
-    quality_ratio = (deep_min + rem_min) / sleep_total_min if sleep_total_min else 0
-    quality_component = min(quality_ratio / 0.40, 1) * 20
-    return round(duration_component + efficiency_component + quality_component, 1)
-
 def ingest(doc):
     wake_date = datetime.fromisoformat(doc['sleep_session_range']['end_local']).date()
     payload = {'date': wake_date.isoformat()}
@@ -91,6 +86,13 @@ def ingest(doc):
         payload['overnight_hr_min_bpm'] = s['min']
         payload['overnight_hr_max_bpm'] = s['max']
 
+    if 'oxygenSaturation' in doc:
+        s = doc['oxygenSaturation']['summary']
+        payload['overnight_spo2_avg_pct'] = s['average']
+        payload['overnight_spo2_min_pct'] = s['min']
+        payload['overnight_spo2_max_pct'] = s['max']
+        payload['overnight_spo2_samples'] = doc['oxygenSaturation'].get('samples', [])
+
     temp_samples = doc.get('appleSleepingWristTemperature', {}).get('samples', [])
     if temp_samples:
         payload['wrist_temp_c'] = temp_samples[0]['value']
@@ -101,10 +103,9 @@ def ingest(doc):
         payload.update(stages)
         payload['sleep_start'] = doc['sleep_session_range']['start_utc']
         payload['sleep_end'] = doc['sleep_session_range']['end_utc']
-        payload['sleep_score'] = compute_sleep_score(
-            stages['sleep_total_min'], stages['sleep_efficiency_pct'],
-            stages['sleep_deep_min'], stages['sleep_rem_min']
-        )
+        # sleep_score is NOT set here - the compute_health_scores DB trigger
+        # recomputes it automatically from these same fields on write. See
+        # ingest_daily_summary.py's docstring for why scoring moved server-side.
 
     return payload
 
