@@ -1,5 +1,6 @@
 <script>
   import { appState } from '../lib/state.svelte.js';
+  import ProgressionChart from './ProgressionChart.svelte';
 
   let { exerciseId, phase } = $props();
 
@@ -20,11 +21,27 @@
         };
       })
   );
+
+  // Top weight per session (warmup/dropset excluded - not the true working
+  // effort) is the chart line: the plainest "am I lifting more over time"
+  // read, no normalization tricks that need explaining.
+  const chartPoints = $derived(
+    matches
+      .map(m => {
+        const weights = m.sets
+          .filter(s => s.tag !== 'warmup' && s.tag !== 'dropset')
+          .map(s => parseFloat(s.weight))
+          .filter(w => !isNaN(w));
+        return weights.length ? { label: m.dateStr, value: Math.max(...weights) } : null;
+      })
+      .filter(Boolean)
+  );
 </script>
 
 {#if !matches.length}
   <div class="prog-empty">No logs yet this phase.</div>
 {:else}
+  <ProgressionChart points={chartPoints} />
   {#each matches as entry}
     <div class="prog-row">
       <span class="prog-date">{entry.dateStr}</span>
