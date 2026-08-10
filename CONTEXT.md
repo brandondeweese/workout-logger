@@ -252,15 +252,30 @@ score at all, which is exactly what happened the first time the skill wrote
 a row. The scripts no longer compute either score themselves.
 
 - `recovery_pct` (migrations `add_respiratory_and_dip_to_scores`,
-  `fix_dip_uses_prior_day_resting_hr`, `baselines_use_rolling_30_day_window`):
+  `fix_dip_uses_prior_day_resting_hr`, `baselines_use_rolling_30_day_window`,
+  `fix_baseline_metric_type_mismatch`, `null_recovery_when_baseline_insufficient`):
   four inputs, each z-scored against a **leave-one-out baseline over a
   rolling 30-day window** (mean/stdev of every *other* row within the last
   30 days that has a value, recomputed fresh each time - still genuinely
   noisy until ~2+ weeks of data accumulate, but no longer lets old data
   permanently anchor the baseline as the table grows):
   `50 + 20*z_hrv - 15*z_rhr - 10*z_rr + 10*z_dip`, clamped 0-100.
-  - HRV/RHR: day-average if present, else the overnight-vitals columns via
-    `coalesce`.
+  - HRV/RHR: prefers the day-average column, falls back to the
+    overnight-vitals column. **Critical**: the baseline it's compared
+    against must come from the SAME source (day-level vs. overnight-only) -
+    early versions coalesced both into one baseline population, which badly
+    inflated z-scores, because day-level `resting_hr_bpm` (Apple's specially
+    filtered "true resting" value) and `overnight_hr_avg_bpm` (a plain
+    average across the whole sleep period) are different metrics with
+    different natural variance. A ~4bpm gap turned into a z-score of 3.46
+    purely because the resting_hr_bpm baseline is naturally razor-tight
+    (sd≈1.2) - blending in an overnight-average data point broke that. Fixed
+    by tracking which source each value came from and querying the baseline
+    from that same source only. Consequence: a day using the overnight-only
+    source needs 2+ *other* overnight-only days in the window to get a
+    score - thin at first, but honest (recovery_pct is explicitly set to
+    null when this happens, not left at a stale prior value or a
+    misleadingly-computed one - see the null-defaulting migration).
   - `z_rr`: respiratory rate vs. baseline - elevated is a bad sign.
   - `z_dip`: **HR dip** = `(prior day's resting_hr_bpm - overnight_hr_min_bpm)
     / prior day's resting_hr_bpm * 100` - how much lower your heart rate runs

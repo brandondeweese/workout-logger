@@ -70,11 +70,40 @@
     const prior = rows.find(r => r.date === priorDateString(row.date));
     return prior?.resting_hr_bpm != null && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
   }
+  // Other rows within the same rolling 30-day window the trigger uses,
+  // excluding this row itself.
+  function windowRows(row){
+    const [y, m, d] = row.date.split('-').map(Number);
+    const windowStart = new Date(y, m - 1, d - 30);
+    return rows.filter(r => {
+      if(r.date === row.date) return false;
+      const [ry, rm, rd] = r.date.split('-').map(Number);
+      return new Date(ry, rm - 1, rd) >= windowStart;
+    });
+  }
   function recoveryMissingFactors(row){
     const missing = [];
-    const hasHrv = row.hrv_ms != null || row.overnight_hrv_ms != null;
-    const hasRhr = row.resting_hr_bpm != null || row.overnight_hr_avg_bpm != null;
-    if(!hasHrv || !hasRhr) missing.push('HRV/RHR (not enough data to score at all)');
+    // HRV/RHR each prefer the day-level column, falling back to the
+    // overnight-only one - but the baseline they're compared against must
+    // come from the SAME source (mixing day-level and overnight-only values
+    // in one baseline produced badly wrong z-scores, since they're
+    // different metrics with different natural ranges - fixed in the
+    // fix_baseline_metric_type_mismatch migration).
+    const hrvFromDay = row.hrv_ms != null;
+    const effHrv = row.hrv_ms ?? row.overnight_hrv_ms;
+    const rhrFromDay = row.resting_hr_bpm != null;
+    const effRhr = row.resting_hr_bpm ?? row.overnight_hr_avg_bpm;
+
+    if(effHrv == null || effRhr == null){
+      missing.push('HRV/RHR (not enough data to score at all)');
+    } else {
+      const others = windowRows(row);
+      const hrvBaselineCount = others.filter(r => (hrvFromDay ? r.hrv_ms : r.overnight_hrv_ms) != null).length;
+      const rhrBaselineCount = others.filter(r => (rhrFromDay ? r.resting_hr_bpm : r.overnight_hr_avg_bpm) != null).length;
+      if(hrvBaselineCount < 2 || rhrBaselineCount < 2){
+        missing.push(`enough history of the same type to build a baseline (today is ${hrvFromDay ? 'day-level' : 'overnight-only'} HRV / ${rhrFromDay ? 'day-level' : 'overnight-only'} RHR - needs 2+ other days of that same kind)`);
+      }
+    }
     if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
     if(!hasDip(row)) missing.push("HR dip (needs yesterday's resting HR + an overnight reading)");
     return missing;
