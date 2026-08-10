@@ -64,6 +64,14 @@ export async function insertLog(entry){
   }catch(e){ return null; }
 }
 
+export async function loadHealthMetrics(){
+  try{
+    const { data, error } = await sb.from('health_metrics').select('*').order('date', {ascending:false});
+    if(error) throw error;
+    return data || [];
+  }catch(e){ return []; }
+}
+
 export async function deleteLog(id){
   try{
     const { error } = await sb.from('workout_logs').delete().eq('id', id);

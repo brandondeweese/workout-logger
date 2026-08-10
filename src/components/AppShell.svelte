@@ -4,6 +4,7 @@
   import History from './History.svelte';
   import Programs from './Programs.svelte';
   import Library from './Library.svelte';
+  import Health from './Health.svelte';
 
   let activeTab = $state('log');
 
@@ -26,6 +27,7 @@
     <div class="tab" class:active={activeTab === 'history'} onclick={() => activeTab = 'history'}>History</div>
     <div class="tab" class:active={activeTab === 'programs'} onclick={() => activeTab = 'programs'}>Programs</div>
     <div class="tab" class:active={activeTab === 'library'} onclick={() => activeTab = 'library'}>Library</div>
+    <div class="tab" class:active={activeTab === 'health'} onclick={() => activeTab = 'health'}>Health</div>
   </div>
 
   <!--
@@ -45,5 +47,8 @@
   </div>
   <div style:display={activeTab === 'library' ? 'block' : 'none'}>
     <Library active={activeTab === 'library'} />
+  </div>
+  <div style:display={activeTab === 'health' ? 'block' : 'none'}>
+    <Health active={activeTab === 'health'} />
   </div>
 </div>
