@@ -1,14 +1,17 @@
 <script>
-  let { pct, label, mode = 'accent', size = 132 } = $props();
+  // pct is the raw value on whatever scale maxScale describes (0-100 for
+  // recovery/sleep, 0-21 for strain) - the ring fill is always normalized
+  // to that scale, but the displayed number/unit stay in the raw scale.
+  let { pct, label, mode = 'accent', size = 132, maxScale = 100, unit = '%', decimals = 0 } = $props();
 
   const r = 52;
   const circumference = 2 * Math.PI * r;
-  const clamped = $derived(pct == null ? 0 : Math.max(0, Math.min(100, pct)));
-  const offset = $derived(circumference * (1 - clamped / 100));
+  const fillPct = $derived(pct == null ? 0 : Math.max(0, Math.min(100, (pct / maxScale) * 100)));
+  const offset = $derived(circumference * (1 - fillPct / 100));
 
-  // WHOOP-style traffic light thresholds for recovery; sleep/other rings
-  // just use a single accent tone since they aren't a "readiness" signal
-  // the same way recovery is.
+  // WHOOP-style traffic light thresholds for recovery; sleep/strain/other
+  // rings just use a single accent tone since they aren't a "readiness"
+  // signal the same way recovery is.
   const color = $derived.by(() => {
     if(mode !== 'recovery' || pct == null) return 'var(--accent)';
     if(pct >= 67) return '#6FA87D';
@@ -31,7 +34,7 @@
     {/if}
   </svg>
   <div class="ring-stat-center">
-    <div class="ring-stat-value">{pct != null ? Math.round(pct) : '—'}{pct != null ? '%' : ''}</div>
+    <div class="ring-stat-value">{pct != null ? pct.toFixed(decimals) : '—'}{pct != null ? unit : ''}</div>
   </div>
   <div class="ring-stat-label">{label}</div>
 </div>

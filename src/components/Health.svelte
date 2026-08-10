@@ -81,6 +81,32 @@
       return new Date(ry, rm - 1, rd) >= windowStart;
     });
   }
+  function effSourceField(row, dayField, overnightField){
+    if(row[dayField] != null) return dayField;
+    if(row[overnightField] != null) return overnightField;
+    return null;
+  }
+  // Personalized z-score status against the SAME same-source/leave-one-out/
+  // 30-day-window baseline the Recovery score itself uses - a fixed
+  // population reference range (e.g. "20-120ms is normal HRV for an adult")
+  // can show "Normal" on the exact day Recovery craters from that value,
+  // because it has no idea what's normal for THIS person. This keeps the
+  // vital card's badge from contradicting what Recovery is responding to.
+  function personalZGauge(row, sourceKey, higherIsBetter){
+    const val = row[sourceKey];
+    if(val == null) return null;
+    const others = windowRows(row).map(r => r[sourceKey]).filter(v => v != null);
+    if(others.length < 2) return { pct: 50, color: AMBER, status: 'Not enough history yet' };
+    const mean = others.reduce((a, b) => a + b, 0) / others.length;
+    const variance = others.reduce((a, b) => a + (b - mean) ** 2, 0) / (others.length - 1);
+    const sd = Math.sqrt(variance);
+    if(!(sd > 0)) return { pct: 50, color: AMBER, status: 'Not enough history yet' };
+    const z = (val - mean) / sd;
+    const pct = Math.max(0, Math.min(100, 50 + z * 20));
+    if(Math.abs(z) <= 1) return { pct, color: GREEN, status: 'Normal' };
+    if(z > 1) return { pct, color: higherIsBetter ? GREEN : AMBER, status: 'High for you' };
+    return { pct, color: higherIsBetter ? AMBER : GREEN, status: 'Low for you' };
+  }
   function recoveryMissingFactors(row){
     const missing = [];
     // HRV/RHR each prefer the day-level column, falling back to the
@@ -123,9 +149,11 @@
   <div class="today-hero-date">{fmtDate(todayDateString())}</div>
 
   {#if today}
-    {@const rr = rangeGauge(today.respiratory_rate_avg, 6, 26, 10, 20)}
-    {@const rhr = rangeGauge(today.overnight_hr_avg_bpm ?? today.resting_hr_bpm, 35, 105, 40, 100)}
-    {@const hrv = rangeGauge(today.overnight_hrv_ms ?? today.hrv_ms, 10, 130, 20, 120)}
+    {@const rr = today.respiratory_rate_avg != null ? personalZGauge(today, 'respiratory_rate_avg', false) : null}
+    {@const rhrField = effSourceField(today, 'resting_hr_bpm', 'overnight_hr_avg_bpm')}
+    {@const rhr = rhrField ? personalZGauge(today, rhrField, false) : null}
+    {@const hrvField = effSourceField(today, 'hrv_ms', 'overnight_hrv_ms')}
+    {@const hrv = hrvField ? personalZGauge(today, hrvField, true) : null}
     {@const temp = rangeGauge(cToF(today.wrist_temp_c), 90, 102, 93, 99.5)}
     {@const sleepDur = rangeGauge(today.sleep_total_min, 240, 600, 360, 540)}
     {@const spo2 = rangeGauge(today.overnight_spo2_avg_pct, 88, 100, 95, 100)}
@@ -143,6 +171,12 @@
         <RingStat pct={today.sleep_score} label="Sleep" mode="accent" />
         {#if sleepMissing.length}
           <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
+        {/if}
+      </div>
+      <div class="ring-col">
+        <RingStat pct={today.strain_score} label="Strain" mode="accent" maxScale={21} unit="" decimals={1} />
+        {#if today.strain_score == null}
+          <div class="missing-note">Missing: continuous heart rate for today (needs daily_hr_hourly)</div>
         {/if}
       </div>
     </div>
@@ -198,6 +232,12 @@
       </div>
       {#if r.sleep_score != null && sleepMissing.length}
         <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
+      {/if}
+      {#if r.strain_score != null}
+        <div class="prog-row">
+          <div class="prog-date">Strain</div>
+          <div class="prog-sets">{round1(r.strain_score)}</div>
+        </div>
       {/if}
       <div class="prog-row">
         <div class="prog-date">Sleep duration</div>

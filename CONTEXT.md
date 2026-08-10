@@ -253,13 +253,25 @@ a row. The scripts no longer compute either score themselves.
 
 - `recovery_pct` (migrations `add_respiratory_and_dip_to_scores`,
   `fix_dip_uses_prior_day_resting_hr`, `baselines_use_rolling_30_day_window`,
-  `fix_baseline_metric_type_mismatch`, `null_recovery_when_baseline_insufficient`):
+  `fix_baseline_metric_type_mismatch`, `null_recovery_when_baseline_insufficient`,
+  `recovery_uses_sigmoid_not_hard_clamp`, `recovery_asymmetric_sigmoid`):
   four inputs, each z-scored against a **leave-one-out baseline over a
   rolling 30-day window** (mean/stdev of every *other* row within the last
   30 days that has a value, recomputed fresh each time - still genuinely
   noisy until ~2+ weeks of data accumulate, but no longer lets old data
   permanently anchor the baseline as the table grows):
-  `50 + 20*z_hrv - 15*z_rhr - 10*z_rr + 10*z_dip`, clamped 0-100.
+  `raw = 20*z_hrv - 15*z_rhr - 10*z_rr + 10*z_dip`, then mapped through an
+  **asymmetric logistic sigmoid** rather than linear+hard-clamp:
+  `100 / (1 + exp(-raw/k))` where `k=25` when `raw>=0` and `k=55` when
+  `raw<0`. Both halves agree at `raw=0` (exactly 50%, no discontinuity).
+  Earlier linear+clamp version made any sufficiently bad day and a
+  genuinely catastrophic day both flatten to the same 0% (no way to tell
+  them apart, and it felt needlessly harsh for a moderately bad night) -
+  the sigmoid compresses extreme values smoothly instead. The gentler k=55
+  on the bad-day side softens harsh outcomes specifically *without*
+  compressing good days (which still use the steeper k=25) - a uniform
+  softer curve was rejected because it would've pulled good days down
+  toward the middle too, which wasn't the actual complaint.
   - HRV/RHR: prefers the day-average column, falls back to the
     overnight-vitals column. **Critical**: the baseline it's compared
     against must come from the SAME source (day-level vs. overnight-only) -
@@ -302,13 +314,59 @@ If you add a new ingestion path or change the formula, edit the trigger
 function directly (`compute_health_scores`) rather than re-adding scoring
 logic to a script - that's the whole point of moving it server-side.
 
-**Strain is intentionally NOT computed right now** (`strain_score` column
-exists but is left null). A first attempt used a step-count-only proxy and
-it was bad - saturated near the top of the 0-21 scale even on light days,
-unable to distinguish a rest day from a hard session. A real WHOOP-style
-strain calculation needs continuous/intraday heart rate (time-in-HR-zone
-across the whole day) plus a known max HR, neither of which is reliably
-available yet. Revisit if continuous all-day HR becomes queryable.
+**Health tab vital cards use personalized status too, not fixed reference
+ranges.** `Health.svelte`'s `personalZGauge()` computes the exact same
+same-source/leave-one-out/30-day-window z-score the trigger uses for HRV,
+RHR, and respiratory rate, and drives each card's Normal/"Low for you"/"High
+for you" badge from it. This was a real bug, not cosmetic: the original
+version used a fixed population reference range (e.g. 20-120ms = "Normal"
+HRV for any adult), which showed "Normal" on a day where HRV had dropped
+~2.8 SD below this person's own baseline and Recovery had cratered because
+of it - two parts of the same screen contradicting each other. SpO2/Temp/
+Sleep-duration cards still use fixed reference ranges since those aren't
+part of the score's baseline logic (no contradiction risk currently). If
+`compute_health_scores`'s baseline logic changes, update `personalZGauge`
+to match, same as the "missing" notes.
+
+**Strain is now computed** (migration `add_strain_calculation`, part of
+`compute_health_scores`) once a real WHOOP-style approach became possible:
+a `daily_hr_hourly` jsonb column (migration `add_daily_hr_hourly_column`,
+written externally by whatever's producing the sleep-vitals-export skill's
+data, not by anything in this repo) holds real continuous/intraday heart
+rate - 24 hourly buckets of `{avg, max, min, hour_start_local}`, with
+`likely_workout`/`workout_overlap_local` flags on some hours - but only for
+days that source provides it (Aug 7, 8, 9 so far, not every day; `null` on
+days without it, same "computed only when the inputs exist" pattern as
+everything else here). A first attempt used a step-count-only proxy and it
+was bad - saturated near the top of the 0-21 scale even on light days,
+unable to distinguish a rest day from a hard session; this replaces that
+entirely now that continuous HR exists.
+
+Formula, per hour with data (`no_data` hours skipped):
+- Blend that hour's avg and max HR 50/50 (avg alone diluted real workout
+  hours too much - within-hour rest periods pulled it down; max alone
+  overweighted brief spikes). Tested both against Aug 7-9's real data
+  before picking the blend.
+- Convert to %HRR (heart rate reserve): `(blended_hr - resting_hr) /
+  (max_hr - resting_hr)`, clamped to [0,1]. `resting_hr` prefers day-level
+  `resting_hr_bpm`, falls back to the calmest hour in the same day's series.
+  `max_hr` is a **flat assumed 184bpm** (Tanaka formula, 208-0.7×age, with
+  age=35 ASSUMED - not measured or provided by the user, a real placeholder
+  that directly shifts every %HRR value; revisit if a real age or measured
+  max HR becomes available).
+- Weight each hour's %HRR using the Banister TRIMP exponential curve
+  (`hrr * e^(1.92*hrr)`) - this is what gives the scale its "hard to move
+  once you're near max effort" compression, matching WHOOP's own described
+  behavior.
+- Sum across all hours, then log-scale onto 0-21: `21 * ln(1+total) /
+  ln(21)`, clamped to [0,21].
+
+Calibration note: on the 3 real days available, raw hourly-load totals
+landed around 3.2-5.4, mapping to strain scores of 9.9-12.8 - moderate, not
+extreme, which tracks with this being resistance-training-focused data
+(lifting doesn't sustain high %HRR the way continuous cardio does) rather
+than a sign the formula is under-scaling. No genuinely all-day-cardio
+reference day exists yet to sanity-check the top end of the curve.
 
 **HRV won't match Bevel's number, and that's expected, not a bug.** Apple
 Health's HRV metric is specifically SDNN (the only HRV type HealthKit
