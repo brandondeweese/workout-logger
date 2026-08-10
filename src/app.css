@@ -328,6 +328,8 @@
   .today-hero-label{font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
   .today-hero-date{font-weight:650;font-size:22px;margin-bottom:18px;}
   .today-rings{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
+  .ring-col{display:flex;flex-direction:column;align-items:center;max-width:180px;}
+  .missing-note{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.4;}
   .ring-stat{position:relative;display:flex;flex-direction:column;align-items:center;}
   .ring-stat-center{
     position:absolute;top:0;left:0;right:0;

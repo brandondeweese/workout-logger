@@ -53,6 +53,30 @@
     const inRange = val >= normalMin && val <= normalMax;
     return { pct, color: inRange ? GREEN : AMBER, status: inRange ? 'Normal' : (val < normalMin ? 'Low' : 'High') };
   }
+
+  // Mirrors exactly what the compute_health_scores DB trigger actually uses/
+  // skips, so these notes never drift from the real formula - if the trigger
+  // changes, update these checks too.
+  function hasDip(row){
+    return row.resting_hr_bpm != null && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
+  }
+  function recoveryMissingFactors(row){
+    const missing = [];
+    const hasHrv = row.hrv_ms != null || row.overnight_hrv_ms != null;
+    const hasRhr = row.resting_hr_bpm != null || row.overnight_hr_avg_bpm != null;
+    if(!hasHrv || !hasRhr) missing.push('HRV/RHR (not enough data to score at all)');
+    if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
+    if(!hasDip(row)) missing.push('HR dip (needs a day-level resting HR + an overnight reading)');
+    return missing;
+  }
+  function sleepMissingFactors(row){
+    const missing = [];
+    const hasStages = row.sleep_total_min != null && row.sleep_deep_min != null && row.sleep_rem_min != null;
+    if(!hasStages) missing.push('sleep stages (not enough data to score at all)');
+    if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
+    if(!hasDip(row)) missing.push('HR dip');
+    return missing;
+  }
 </script>
 
 <div class="today-hero">
@@ -67,9 +91,21 @@
     {@const sleepDur = rangeGauge(today.sleep_total_min, 240, 600, 360, 540)}
     {@const spo2 = rangeGauge(today.overnight_spo2_avg_pct, 88, 100, 95, 100)}
 
+    {@const recMissing = recoveryMissingFactors(today)}
+    {@const sleepMissing = sleepMissingFactors(today)}
     <div class="today-rings">
-      <RingStat pct={today.recovery_pct} label="Recovery" mode="recovery" />
-      <RingStat pct={today.sleep_score} label="Sleep" mode="accent" />
+      <div class="ring-col">
+        <RingStat pct={today.recovery_pct} label="Recovery" mode="recovery" />
+        {#if recMissing.length}
+          <div class="missing-note">Missing: {recMissing.join(', ')}</div>
+        {/if}
+      </div>
+      <div class="ring-col">
+        <RingStat pct={today.sleep_score} label="Sleep" mode="accent" />
+        {#if sleepMissing.length}
+          <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
+        {/if}
+      </div>
     </div>
 
     <div class="vital-section-title">Health Monitor</div>
@@ -106,16 +142,24 @@
   <div class="empty">No earlier health data yet.</div>
 {:else}
   {#each pastRows as r (r.date)}
+    {@const recMissing = recoveryMissingFactors(r)}
+    {@const sleepMissing = sleepMissingFactors(r)}
     <div class="hist-entry">
       <div class="hist-date">{fmtDate(r.date)}</div>
       <div class="prog-row">
         <div class="prog-date">Recovery</div>
         <div class="prog-sets">{r.recovery_pct != null ? `${round1(r.recovery_pct)}%` : '—'}</div>
       </div>
+      {#if r.recovery_pct != null && recMissing.length}
+        <div class="missing-note">Missing: {recMissing.join(', ')}</div>
+      {/if}
       <div class="prog-row">
         <div class="prog-date">Sleep score</div>
         <div class="prog-sets">{r.sleep_score != null ? `${round1(r.sleep_score)}%` : '—'}</div>
       </div>
+      {#if r.sleep_score != null && sleepMissing.length}
+        <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
+      {/if}
       <div class="prog-row">
         <div class="prog-date">Sleep duration</div>
         <div class="prog-sets">{fmtHM(r.sleep_total_min)}{r.sleep_efficiency_pct != null ? ` · ${round1(r.sleep_efficiency_pct)}% efficiency` : ''}</div>
