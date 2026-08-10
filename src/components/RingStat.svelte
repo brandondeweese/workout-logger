@@ -1,6 +1,6 @@
 <script>
-  // pct is the raw value on whatever scale maxScale describes (0-100 for
-  // recovery/sleep, 0-21 for strain) - the ring fill is always normalized
+  // pct is the raw value on whatever scale maxScale describes (0-100 by
+  // default for recovery/sleep/strain) - the ring fill is always normalized
   // to that scale, but the displayed number/unit stay in the raw scale.
   let { pct, label, mode = 'accent', size = 132, maxScale = 100, unit = '%', decimals = 0 } = $props();
 

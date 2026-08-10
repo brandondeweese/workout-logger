@@ -358,15 +358,21 @@ Formula, per hour with data (`no_data` hours skipped):
   (`hrr * e^(1.92*hrr)`) - this is what gives the scale its "hard to move
   once you're near max effort" compression, matching WHOOP's own described
   behavior.
-- Sum across all hours, then log-scale onto 0-21: `21 * ln(1+total) /
-  ln(21)`, clamped to [0,21].
+- Sum across all hours, then log-scale onto **0-100** (migration
+  `strain_scale_0_to_100`, switched from an initial 0-21 WHOOP-style scale
+  for consistency with Recovery/Sleep, which are also 0-100): `100 *
+  ln(1+total) / ln(21)`, clamped to [0,100]. `ln(21)` is kept as the curve's
+  calibration reference point (only the output multiplier changed from 21
+  to 100) so the shape - how load maps to score - is unchanged, just the
+  displayed range.
 
 Calibration note: on the 3 real days available, raw hourly-load totals
-landed around 3.2-5.4, mapping to strain scores of 9.9-12.8 - moderate, not
-extreme, which tracks with this being resistance-training-focused data
-(lifting doesn't sustain high %HRR the way continuous cardio does) rather
-than a sign the formula is under-scaling. No genuinely all-day-cardio
-reference day exists yet to sanity-check the top end of the curve.
+landed around 3.2-5.4, mapping to strain scores in the high-40s to
+low-60s on the 0-100 scale - moderate, not extreme, which tracks with this
+being resistance-training-focused data (lifting doesn't sustain high %HRR
+the way continuous cardio does) rather than a sign the formula is
+under-scaling. No genuinely all-day-cardio reference day exists yet to
+sanity-check the top end of the curve.
 
 **HRV won't match Bevel's number, and that's expected, not a bug.** Apple
 Health's HRV metric is specifically SDNN (the only HRV type HealthKit

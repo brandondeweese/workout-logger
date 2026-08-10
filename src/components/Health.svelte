@@ -208,7 +208,7 @@
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={current.strain_score} label="Strain" mode="accent" maxScale={21} unit="" decimals={1} />
+        <RingStat pct={current.strain_score} label="Strain" mode="accent" />
         {#if current.strain_score == null}
           <div class="missing-note">Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
         {/if}
