@@ -210,6 +210,57 @@ this wasn't nailed down explicitly with the user.
   (`.exercise{padding:10px 0}`) after "too much space between exercises"
   feedback — don't regress this back to the earlier 20px without reason.
 
+## Health metrics (Apple Health / HealthKit integration)
+
+A `health_metrics` table (one row per calendar day, keyed by `date`, RLS
+matching the rest of the schema) was added to hold Apple Health data pulled
+via Claude iOS (which has HealthKit access granted) and pasted into a chat
+session with Supabase access - **not** an automated Skill yet, just manual
+request/response for now. Two reusable ingestion scripts live in
+`scripts/health/`, both idempotent upserts keyed by date so they compose:
+
+- `ingest_daily_summary.py` - the multi-day shape: day-average HRV/resting
+  HR, daily step-count sums, and raw sleep-stage interval samples across a
+  date range. Groups sleep samples into per-night sessions (gap detection,
+  >3h gap = new session) and dates each session by its **wake date**, not
+  the evening it started.
+- `ingest_sleep_session_detail.py` - the single-night richer shape: HRV
+  samples/summary, respiratory rate, continuous overnight heart rate,
+  Apple's single nightly wrist-temperature reading, and (optionally) raw
+  sleep stage samples. Only touches the overnight-vitals columns it's given,
+  so it layers on top of whatever `ingest_daily_summary.py` already set.
+
+Both require a fresh Supabase auth access_token saved at `/tmp/sp_token.txt`
+(tokens expire ~hourly - re-auth via the `/auth/v1/token?grant_type=password`
+endpoint with the anon key + user credentials).
+
+**Computed scores**: `recovery_pct` (HRV/resting-HR z-scored against the
+mean/stdev of whatever days exist so far - genuinely noisy until ~2+ weeks
+of data accumulate; needs a proper rolling-window baseline eventually, not
+all-time) and `sleep_score` (duration vs. 8h target 50% + sleep efficiency
+30% + deep/REM proportion 20%).
+
+**Strain is intentionally NOT computed right now** (`strain_score` column
+exists but is left null). A first attempt used a step-count-only proxy and
+it was bad - saturated near the top of the 0-21 scale even on light days,
+unable to distinguish a rest day from a hard session. A real WHOOP-style
+strain calculation needs continuous/intraday heart rate (time-in-HR-zone
+across the whole day) plus a known max HR, neither of which is reliably
+available yet. Revisit if continuous all-day HR becomes queryable.
+
+**HRV won't match Bevel's number, and that's expected, not a bug.** Apple
+Health's HRV metric is specifically SDNN (the only HRV type HealthKit
+exposes publicly); Bevel (and most recovery-focused wearables) likely use
+RMSSD or their own proprietary aggregation, which is why the numbers
+diverge even when both read the same underlying Apple Watch data - Apple
+doesn't expose raw beat-to-beat intervals, only pre-computed SDNN spot
+samples (~every 2h), so RMSSD can't be reconstructed from what's available.
+Tested median/outlier-exclusion/min-only aggregations of the same samples
+against Bevel's reported value and none matched, confirming it's a real
+methodology difference, not just an averaging choice. Treat this app's HRV
+as its own internally-consistent metric, not something to reconcile against
+Bevel.
+
 ## Tone/working-style notes for whoever picks this up
 
 This session involved a lot of rapid, frustrated iteration — the user is
