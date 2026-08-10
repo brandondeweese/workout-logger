@@ -251,14 +251,28 @@ Python-side-only computation meant rows from other writers silently got no
 score at all, which is exactly what happened the first time the skill wrote
 a row. The scripts no longer compute either score themselves.
 
-- `recovery_pct`: HRV and resting HR (day-average if present, else the
-  overnight-vitals columns via `coalesce`) z-scored against a **leave-one-out
-  baseline** - mean/stdev of every *other* row that has a value, recomputed
-  fresh each time. Still genuinely noisy until ~2+ weeks of data accumulate,
-  and using ALL history rather than a rolling ~30-day window will eventually
-  need revisiting as the table grows.
-- `sleep_score`: duration vs. 8h target (50%) + sleep efficiency (30%) +
-  deep/REM proportion (20%). Only computed when stage-level data
+- `recovery_pct` (migration `add_respiratory_and_dip_to_scores`): four
+  inputs, each z-scored against a **leave-one-out baseline** (mean/stdev of
+  every *other* row that has a value, recomputed fresh each time - still
+  genuinely noisy until ~2+ weeks of data accumulate, and using ALL history
+  rather than a rolling ~30-day window will eventually need revisiting):
+  `50 + 20*z_hrv - 15*z_rhr - 10*z_rr + 10*z_dip`, clamped 0-100.
+  - HRV/RHR: day-average if present, else the overnight-vitals columns via
+    `coalesce`.
+  - `z_rr`: respiratory rate vs. baseline - elevated is a bad sign.
+  - `z_dip`: **HR dip** = `(resting_hr_bpm - overnight_hr_min_bpm) /
+    resting_hr_bpm * 100` - how much lower your heart rate runs overnight
+    vs. your daytime resting rate, a real recovery signal in sleep science.
+    Needs BOTH a day-level `resting_hr_bpm` AND an overnight reading: a row
+    with only overnight-vitals data (like the skill's typical push) can't
+    compute this, and the term drops out (z_dip stays 0) rather than
+    breaking the calc.
+- `sleep_score`: duration vs. 8h target (35%) + sleep efficiency (20%) +
+  deep/REM proportion (15%) + respiratory-rate stability (15%, full credit
+  unless RR is elevated vs. baseline) + HR dip (15%, fixed target of 15%+
+  dip = full credit, not baseline-relative since dip is already a
+  within-day relative measure; neutral half-credit when dip isn't
+  computable at all). Only computed when stage-level data
   (`sleep_total_min`/`sleep_deep_min`/`sleep_rem_min`) is present - a row
   with only overnight vitals (no stage breakdown) keeps `sleep_score` null.
 
