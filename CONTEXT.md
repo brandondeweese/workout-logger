@@ -251,22 +251,29 @@ Python-side-only computation meant rows from other writers silently got no
 score at all, which is exactly what happened the first time the skill wrote
 a row. The scripts no longer compute either score themselves.
 
-- `recovery_pct` (migration `add_respiratory_and_dip_to_scores`): four
-  inputs, each z-scored against a **leave-one-out baseline** (mean/stdev of
-  every *other* row that has a value, recomputed fresh each time - still
-  genuinely noisy until ~2+ weeks of data accumulate, and using ALL history
-  rather than a rolling ~30-day window will eventually need revisiting):
+- `recovery_pct` (migrations `add_respiratory_and_dip_to_scores`,
+  `fix_dip_uses_prior_day_resting_hr`, `baselines_use_rolling_30_day_window`):
+  four inputs, each z-scored against a **leave-one-out baseline over a
+  rolling 30-day window** (mean/stdev of every *other* row within the last
+  30 days that has a value, recomputed fresh each time - still genuinely
+  noisy until ~2+ weeks of data accumulate, but no longer lets old data
+  permanently anchor the baseline as the table grows):
   `50 + 20*z_hrv - 15*z_rhr - 10*z_rr + 10*z_dip`, clamped 0-100.
   - HRV/RHR: day-average if present, else the overnight-vitals columns via
     `coalesce`.
   - `z_rr`: respiratory rate vs. baseline - elevated is a bad sign.
-  - `z_dip`: **HR dip** = `(resting_hr_bpm - overnight_hr_min_bpm) /
-    resting_hr_bpm * 100` - how much lower your heart rate runs overnight
-    vs. your daytime resting rate, a real recovery signal in sleep science.
-    Needs BOTH a day-level `resting_hr_bpm` AND an overnight reading: a row
-    with only overnight-vitals data (like the skill's typical push) can't
-    compute this, and the term drops out (z_dip stays 0) rather than
-    breaking the calc.
+  - `z_dip`: **HR dip** = `(prior day's resting_hr_bpm - overnight_hr_min_bpm)
+    / prior day's resting_hr_bpm * 100` - how much lower your heart rate runs
+    overnight vs. your daytime resting rate, a real recovery signal in sleep
+    science. Deliberately uses the **prior calendar day's** `resting_hr_bpm`,
+    not this row's own: sleep sessions are dated by wake date (this row is
+    "last night's sleep, experienced this morning"), so the correct daytime
+    reference is the day you were actually awake before that sleep, not this
+    date's own value (which may not exist yet if today isn't over). Needs
+    BOTH the prior day's `resting_hr_bpm` AND an overnight reading on this
+    row: a row with only overnight-vitals data (like the skill's typical
+    push) can't compute this, and the term drops out (z_dip stays 0) rather
+    than breaking the calc.
 - `sleep_score`: duration vs. 8h target (35%) + sleep efficiency (20%) +
   deep/REM proportion (15%) + respiratory-rate stability (15%, full credit
   unless RR is elevated vs. baseline) + HR dip (15%, fixed target of 15%+

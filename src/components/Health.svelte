@@ -57,8 +57,18 @@
   // Mirrors exactly what the compute_health_scores DB trigger actually uses/
   // skips, so these notes never drift from the real formula - if the trigger
   // changes, update these checks too.
+  function priorDateString(dateStr){
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d - 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  }
   function hasDip(row){
-    return row.resting_hr_bpm != null && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
+    // dip compares this row's overnight low against the PRIOR calendar
+    // day's daytime resting HR - the sleep on this row is dated by wake
+    // date (last night's sleep), which followed the day before this one,
+    // not this date's own (possibly-incomplete/future) daytime data.
+    const prior = rows.find(r => r.date === priorDateString(row.date));
+    return prior?.resting_hr_bpm != null && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
   }
   function recoveryMissingFactors(row){
     const missing = [];
@@ -66,7 +76,7 @@
     const hasRhr = row.resting_hr_bpm != null || row.overnight_hr_avg_bpm != null;
     if(!hasHrv || !hasRhr) missing.push('HRV/RHR (not enough data to score at all)');
     if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
-    if(!hasDip(row)) missing.push('HR dip (needs a day-level resting HR + an overnight reading)');
+    if(!hasDip(row)) missing.push("HR dip (needs yesterday's resting HR + an overnight reading)");
     return missing;
   }
   function sleepMissingFactors(row){
