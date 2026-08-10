@@ -276,7 +276,7 @@
               <div class="load-bar-marker" style:left="65%"></div>
             </div>
             <div class="load-row-meta">
-              {lr.acwr != null ? `${lr.acwr}x` : '—'} · 7d {Math.round(lr.acute_load).toLocaleString()} vs wk-avg {Math.round(lr.chronic_load).toLocaleString()}
+              {lr.acwr != null ? `${lr.acwr}x` : '—'} · 14d {Math.round(lr.acute_load).toLocaleString()} vs 14d-avg {Math.round(lr.chronic_load).toLocaleString()}
             </div>
           </div>
         {/each}

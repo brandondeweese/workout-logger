@@ -389,13 +389,28 @@ Two new DB objects (migration `add_training_load_by_body_part`):
   tonnage + working-set count, `security_invoker=true` so it respects
   whatever RLS the underlying tables have.
 - Function `body_part_load_status(as_of date default current_date)` - the
-  acute:chronic workload ratio (ACWR) per body part: acute = trailing 7-day
-  tonnage sum, chronic = trailing 28-day tonnage sum normalized to a weekly
-  rate (/4). Status bands are the standard sports-science ACWR convention
-  (Gabbett et al.): <0.8 undertrained, 0.8-1.3 optimal, 1.3-1.5 caution,
-  >1.5 high risk. Only returns body parts with tonnage in the trailing 28
-  days. Called via `sb.rpc('body_part_load_status', {as_of})` from
-  `loadBodyPartLoadStatus()` in `db.js`.
+  acute:chronic workload ratio (ACWR) per body part: acute = trailing
+  14-day tonnage sum, chronic = trailing 56-day tonnage sum normalized to a
+  14-day-equivalent rate (/4). Status bands are the standard sports-science
+  ACWR convention (Gabbett et al.), ported as an approximation for lifting
+  rather than a clinically validated system for it: <0.8 undertrained,
+  0.8-1.3 optimal, 1.3-1.5 caution, >1.5 high risk. Only returns body parts
+  with tonnage in the trailing 56 days. Called via
+  `sb.rpc('body_part_load_status', {as_of})` from `loadBodyPartLoadStatus()`
+  in `db.js`.
+
+  Windows were originally 7d/28d (the textbook ACWR pairing) but that badly
+  misfit this user's split routine: at ~1x/week per body part, a 7-day
+  acute window is about one training cycle, so any muscle not yet hit *this*
+  cycle read as "Undertrained" regardless of real trend - noise, not signal
+  (first caught from a real screenshot: Chest showed 0x/"Undertrained" the
+  day before chest day, and Forearms flipped to "High risk" off a
+  675->1080 swing, tiny absolute numbers for a muscle mostly worked
+  incidentally via grip on other lifts). Widened to 14d/56d, migration
+  `widen_training_load_windows`, so both windows span multiple hits of each
+  body part and the ratio reflects actual trend. If the training split's
+  cadence changes drastically (e.g. moves to full-body daily), revisit
+  whether these windows still fit.
 
 Health tab shows this as a "Training Load" section below the vital-card
 grid, re-queried with `as_of = current.date` whenever the day-nav selection
