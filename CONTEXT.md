@@ -374,48 +374,41 @@ the way continuous cardio does) rather than a sign the formula is
 under-scaling. No genuinely all-day-cardio reference day exists yet to
 sanity-check the top end of the curve.
 
-**Training Load (muscular/mechanical, separate from cardio Strain above).**
-Strain is entirely HR-derived, so it can't see resistance-training fatigue -
-a heavy lifting session spikes HR in bursts between sets but doesn't sustain
-elevated %HRR the way cardio does, so Strain reads "Moderate" even on brutal
-lifting days. Training Load fills that gap using data that already exists in
-`workout_logs` (no HealthKit input needed): tonnage (weight x reps, warmup-
-tagged sets excluded) attributed to every body part a movement maps to via
-`movement_body_parts` (full credit to each mapped part, not split - a bench
-press set counts fully toward chest AND triceps).
+**Training Load - tried and removed (muscular/mechanical fatigue, separate
+from cardio Strain above).** Strain is entirely HR-derived, so it can't see
+resistance-training fatigue - lifting spikes HR in bursts between sets but
+doesn't sustain elevated %HRR the way cardio does. Built a "Training Load"
+section (migration `add_training_load_by_body_part`, then
+`widen_training_load_windows`) using tonnage (weight x reps) from
+`workout_logs`, attributed to body parts via `movement_body_parts`, scored
+as an acute:chronic workload ratio (ACWR, the standard sports-science
+convention: <0.8 undertrained, 0.8-1.3 optimal, 1.3-1.5 caution, >1.5 high
+risk) - first at 7d/28d windows, then widened to 14d/56d after the 7d
+window turned out to be about one training cycle for this user's split
+routine, so muscles not yet hit that week wrongly read "Undertrained."
 
-Two new DB objects (migration `add_training_load_by_body_part`):
-- View `workout_body_part_volume` - one row per (date, body_part): summed
-  tonnage + working-set count, `security_invoker=true` so it respects
-  whatever RLS the underlying tables have.
-- Function `body_part_load_status(as_of date default current_date)` - the
-  acute:chronic workload ratio (ACWR) per body part: acute = trailing
-  14-day tonnage sum, chronic = trailing 56-day tonnage sum normalized to a
-  14-day-equivalent rate (/4). Status bands are the standard sports-science
-  ACWR convention (Gabbett et al.), ported as an approximation for lifting
-  rather than a clinically validated system for it: <0.8 undertrained,
-  0.8-1.3 optimal, 1.3-1.5 caution, >1.5 high risk. Only returns body parts
-  with tonnage in the trailing 56 days. Called via
-  `sb.rpc('body_part_load_status', {as_of})` from `loadBodyPartLoadStatus()`
-  in `db.js`.
+Removed entirely (migration `drop_training_load_by_body_part`) after the
+widened version still produced a nonsense verdict: "Abs: High risk" at
+~9 sets/week, objectively light volume by any standard. Root cause wasn't
+bad data - checked the actual rows, Cable Crunch/Hanging Knee
+Raise/Bosu Ball Leg Lift were correctly attributed to Abs - it's that
+tonnage ratios have no sense of absolute scale. Abs' baseline tonnage is
+small (partly because several ab exercises are bodyweight, weight=0, so
+tonnage undercounts them structurally), so completely ordinary set-to-set
+variation (70 vs 75 lbs, 15 vs 18 reps) produces a large percentage swing
+and an alarming-sounding "risk" label on a genuinely unremarkable week.
+ACWR is built for near-daily/continuous training loads (running mileage,
+team practice) where volume is large and smooth; it doesn't transfer
+cleanly to a lower-frequency split with small per-exercise tonnage.
 
-  Windows were originally 7d/28d (the textbook ACWR pairing) but that badly
-  misfit this user's split routine: at ~1x/week per body part, a 7-day
-  acute window is about one training cycle, so any muscle not yet hit *this*
-  cycle read as "Undertrained" regardless of real trend - noise, not signal
-  (first caught from a real screenshot: Chest showed 0x/"Undertrained" the
-  day before chest day, and Forearms flipped to "High risk" off a
-  675->1080 swing, tiny absolute numbers for a muscle mostly worked
-  incidentally via grip on other lifts). Widened to 14d/56d, migration
-  `widen_training_load_windows`, so both windows span multiple hits of each
-  body part and the ratio reflects actual trend. If the training split's
-  cadence changes drastically (e.g. moves to full-body daily), revisit
-  whether these windows still fit.
-
-Health tab shows this as a "Training Load" section below the vital-card
-grid, re-queried with `as_of = current.date` whenever the day-nav selection
-changes - so paging back through history shows what load status looked like
-as of that day, not just today's.
+If muscular fatigue gets revisited, a days-since-last-trained framing
+(plus how the last session compared to that body part's own typical
+session) was the direction discussed as more honest and more directly
+actionable than a scored/ratio verdict - "last trained 2 days ago, session
+was 18% above typical" tells you something you can act on; a manufactured
+"Recovered"/"High risk" status doesn't, and would require assuming a
+personal recovery-time constant (varies by age/sleep/training status) this
+app has no way to actually measure.
 
 **HRV won't match Bevel's number, and that's expected, not a bug.** Apple
 Health's HRV metric is specifically SDNN (the only HRV type HealthKit

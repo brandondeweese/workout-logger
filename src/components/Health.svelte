@@ -1,12 +1,11 @@
 <script>
-  import { loadHealthMetrics, loadBodyPartLoadStatus } from '../lib/db.js';
+  import { loadHealthMetrics } from '../lib/db.js';
   import VitalCard from './VitalCard.svelte';
   import RingStat from './RingStat.svelte';
 
   let { active } = $props();
   let rows = $state([]);
   let selectedDate = $state(null);
-  let loadRows = $state([]);
 
   // Health stays mounted (never unmounted) so it can't rely on onMount alone -
   // refetch whenever this tab becomes visible, matching History's pattern.
@@ -39,25 +38,7 @@
   function goPrev(){ if(hasPrev) selectedDate = sortedRows[currentIndex - 1].date; }
   function goNext(){ if(hasNext) selectedDate = sortedRows[currentIndex + 1].date; }
 
-  // Training load (volume tonnage per body part, from workout_logs - not
-  // HealthKit) is a separate axis from cardio Strain above: Strain is
-  // heart-rate-driven and structurally can't see mechanical/muscular
-  // fatigue from resistance work. Re-derives "as of" the viewed day, so
-  // paging back through history shows what load status looked like then,
-  // not just today's.
-  $effect(() => {
-    if(active && current) loadBodyPartLoadStatus(current.date).then(r => loadRows = r);
-  });
-
   const GREEN = '#6FA87D', AMBER = '#C9A24B';
-
-  const LOAD_STATUS = {
-    optimal:      { label: 'Optimal',    color: GREEN },
-    caution:      { label: 'Caution',    color: AMBER },
-    'high risk':  { label: 'High risk',  color: 'var(--danger)' },
-    undertrained: { label: 'Undertrained', color: 'var(--muted)' },
-    new:          { label: 'Building baseline', color: 'var(--muted)' },
-  };
 
   const heroLabel = $derived.by(() => {
     if(selectedDate == null) return '';
@@ -259,31 +240,6 @@
         <div class="today-stat-value">{current.step_count != null ? current.step_count.toLocaleString() : '—'}</div>
       </div>
     </div>
-
-    <div class="vital-section-title">Training Load</div>
-    {#if loadRows.length}
-      <div class="load-list">
-        {#each loadRows as lr}
-          {@const st = LOAD_STATUS[lr.status] ?? LOAD_STATUS.new}
-          <div class="load-row">
-            <div class="load-row-top">
-              <span class="load-row-name">{lr.body_part_name}</span>
-              <span class="load-row-status" style:color={st.color}>{st.label}</span>
-            </div>
-            <div class="load-bar-track">
-              <div class="load-bar-fill" style:width="{Math.min(100, (lr.acwr ?? 0) / 2 * 100)}%" style:background={st.color}></div>
-              <div class="load-bar-marker" style:left="40%"></div>
-              <div class="load-bar-marker" style:left="65%"></div>
-            </div>
-            <div class="load-row-meta">
-              {lr.acwr != null ? `${lr.acwr}x` : '—'} · 14d {Math.round(lr.acute_load).toLocaleString()} vs 14d-avg {Math.round(lr.chronic_load).toLocaleString()}
-            </div>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <div class="today-empty">No recent training data.</div>
-    {/if}
   {:else if selectedDate}
     <div class="today-empty">No data for this day.</div>
   {:else}

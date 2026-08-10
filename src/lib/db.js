@@ -72,14 +72,6 @@ export async function loadHealthMetrics(){
   }catch(e){ return []; }
 }
 
-export async function loadBodyPartLoadStatus(asOfDate){
-  try{
-    const { data, error } = await sb.rpc('body_part_load_status', asOfDate ? { as_of: asOfDate } : {});
-    if(error) throw error;
-    return data || [];
-  }catch(e){ return []; }
-}
-
 export async function deleteLog(id){
   try{
     const { error } = await sb.from('workout_logs').delete().eq('id', id);
