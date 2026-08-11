@@ -63,6 +63,20 @@ export async function loadLogs(){
       exercises: row.exercises,
       program_id: row.program_id,
       program_name: row.program_name,
+      // HealthKit-imported cardio sessions carry these instead of a set list
+      // (their `exercises` is an empty array). metricsSource distinguishes them
+      // from hand-logged strength workouts, which leave all of these null.
+      activityType: row.activity_type,
+      metricsSource: row.metrics_source,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      distanceM: row.distance_m,
+      activeEnergyKcal: row.active_energy_kcal,
+      restingEnergyKcal: row.resting_energy_kcal,
+      hrAvgBpm: row.hr_avg_bpm,
+      hrMinBpm: row.hr_min_bpm,
+      hrMaxBpm: row.hr_max_bpm,
+      hrSamples: row.hr_samples,
     }));
   }catch(e){ return []; }
 }
