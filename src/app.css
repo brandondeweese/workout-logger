@@ -348,13 +348,13 @@
   .day-nav-label{text-align:center;min-width:150px;}
   .today-hero-label{font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
   .today-hero-date{font-weight:650;font-size:22px;}
-  .today-rings{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
-  .ring-col{display:flex;flex-direction:column;align-items:center;max-width:180px;}
+  .today-rings{display:flex;gap:10px;justify-content:center;flex-wrap:nowrap;margin-bottom:18px;}
+  .ring-col{display:flex;flex-direction:column;align-items:center;min-width:0;flex:0 1 auto;}
   .missing-note{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.4;}
   .ring-stat{position:relative;display:flex;flex-direction:column;align-items:center;}
   .ring-stat-center{
     position:absolute;top:0;left:0;right:0;
-    height:132px;display:flex;align-items:center;justify-content:center;
+    display:flex;align-items:center;justify-content:center;
   }
   .ring-stat-value{font-size:26px;font-weight:650;color:var(--text);}
   .ring-stat-label{font-size:13px;color:var(--muted);margin-top:8px;}

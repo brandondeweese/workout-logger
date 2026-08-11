@@ -30,7 +30,7 @@
 
   <div class="tabs">
     <div class="tab" class:active={activeTab === 'health'} onclick={() => activeTab = 'health'}>Health</div>
-    <div class="tab" class:active={activeTab === 'log'} onclick={() => activeTab = 'log'}>Log Workout</div>
+    <div class="tab" class:active={activeTab === 'log'} onclick={() => activeTab = 'log'}>Workout</div>
     <div class="tab" class:active={activeTab === 'progress'} onclick={() => activeTab = 'progress'}>Progress</div>
     <div class="tab" class:active={activeTab === 'more'} onclick={() => activeTab = 'more'}>More</div>
   </div>

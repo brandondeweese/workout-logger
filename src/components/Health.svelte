@@ -196,19 +196,19 @@
     {@const sleepMissing = sleepMissingFactors(current)}
     <div class="today-rings">
       <div class="ring-col">
-        <RingStat pct={current.recovery_pct} label="Recovery" mode="recovery" />
+        <RingStat pct={current.recovery_pct} label="Recovery" mode="recovery" size={100} />
         {#if recMissing.length}
           <div class="missing-note">Missing: {recMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={current.sleep_score} label="Sleep" mode="accent" />
+        <RingStat pct={current.sleep_score} label="Sleep" mode="accent" size={100} />
         {#if sleepMissing.length}
           <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={current.strain_score} label="Strain" mode="accent" />
+        <RingStat pct={current.strain_score} label="Strain" mode="accent" size={100} />
         {#if current.strain_score == null}
           <div class="missing-note">Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
         {/if}

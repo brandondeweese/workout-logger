@@ -33,7 +33,7 @@
       />
     {/if}
   </svg>
-  <div class="ring-stat-center">
+  <div class="ring-stat-center" style:height="{size}px">
     <div class="ring-stat-value">{pct != null ? pct.toFixed(decimals) : '—'}{pct != null ? unit : ''}</div>
   </div>
   <div class="ring-stat-label">{label}</div>
