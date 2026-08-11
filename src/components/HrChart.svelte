@@ -9,9 +9,14 @@
 
   // HealthKit hands these back newest-first; plotting them unsorted draws the
   // run backwards. Sort ascending and drop anything unparseable.
+  //
+  // Accept both {t,bpm} and {t,value}: workout_logs.hr_samples uses `bpm` while
+  // the overnight_*_samples columns use `value`, and the sync skills are meant
+  // to converge on one. Tolerating both means whichever way that lands, this
+  // keeps rendering instead of silently drawing an empty chart.
   const points = $derived.by(() => {
     const parsed = (samples || [])
-      .map(s => ({ ms: new Date(s.t).getTime(), bpm: Number(s.bpm) }))
+      .map(s => ({ ms: new Date(s.t).getTime(), bpm: Number(s.bpm ?? s.value) }))
       .filter(s => !isNaN(s.ms) && !isNaN(s.bpm))
       .sort((a, b) => a.ms - b.ms);
     if(parsed.length < 2) return [];
