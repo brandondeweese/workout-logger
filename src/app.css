@@ -117,7 +117,7 @@
     padding:10px 0;max-width:100%;
     border-radius:var(--radius);transition:background .2s ease;
   }
-  .exercise.complete{background:rgba(108,147,190,0.10);}
+  .exercise.complete{background:rgba(108,147,190,0.10); padding:10px;}
   .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
   .ex-name{font-weight:300;font-size:20px;overflow-wrap:break-word;}
   #exercises{margin-top:22px;}
