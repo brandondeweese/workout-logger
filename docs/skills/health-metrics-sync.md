@@ -1,6 +1,6 @@
 ---
 name: health-metrics-sync
-description: Use whenever the user asks to sync, push, upload, or save HealthKit data to Supabase/the database, or to update the health_metrics table with sleep/HRV/HR/SpO2/steps. Also use after pulling sleep vitals (see sleep-vitals-export skill) if the user wants it persisted rather than just exported to a file. Trigger on "push to supabase", "sync my health data", "save last night's data", "update the db".
+description: Use whenever the user asks to sync, push, upload, or save a day's HealthKit vitals to Supabase/the database, or to update the health_metrics table with sleep/HRV/HR/SpO2/steps. Also use after pulling sleep vitals (see sleep-vitals-export skill) if the user wants it persisted rather than just exported to a file. Trigger on "push to supabase", "sync my health data", "save last night's data", "update the db". Does NOT log individual workouts - if the user means one run, ride or lift session, use the workout-metrics skill instead.
 ---
 
 # Health Metrics Sync

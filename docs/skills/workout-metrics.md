@@ -1,6 +1,6 @@
 ---
 name: workout-metrics
-description: Log a single workout's HealthKit metrics (activity type, duration, distance, energy, heart rate + samples) into the workout-logger Supabase workout_logs table. Use when the user asks to push, sync, or save a workout to the database, or right after finishing a workout they want recorded.
+description: Log ONE workout session (a run, ride, lift, or other activity) from HealthKit into the Supabase workout_logs table, with its duration, distance, energy and heart rate samples. Trigger on "push my workout", "log this run", "save my workout", "sync my run", "I just finished a workout". Use this for an individual activity - for a day's sleep, HRV, resting HR, SpO2 or step totals, use the health-metrics-sync skill instead.
 ---
 
 # Workout Metrics
