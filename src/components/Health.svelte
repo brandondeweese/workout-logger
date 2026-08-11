@@ -114,13 +114,8 @@
       return new Date(ry, rm - 1, rd) >= windowStart;
     });
   }
-  function effSourceField(row, dayField, overnightField){
-    if(row[dayField] != null) return dayField;
-    if(row[overnightField] != null) return overnightField;
-    return null;
-  }
-  // Personalized z-score status against the SAME same-source/leave-one-out/
-  // 30-day-window baseline the Recovery score itself uses - a fixed
+  // Personalized z-score status against the SAME leave-one-out/30-day-window
+  // baseline the Recovery score itself uses - a fixed
   // population reference range (e.g. "20-120ms is normal HRV for an adult")
   // can show "Normal" on the exact day Recovery craters from that value,
   // because it has no idea what's normal for THIS person. This keeps the
@@ -142,25 +137,22 @@
   }
   function recoveryMissingFactors(row){
     const missing = [];
-    // HRV/RHR each prefer the day-level column, falling back to the
-    // overnight-only one - but the baseline they're compared against must
-    // come from the SAME source (mixing day-level and overnight-only values
-    // in one baseline produced badly wrong z-scores, since they're
-    // different metrics with different natural ranges - fixed in the
-    // fix_baseline_metric_type_mismatch migration).
-    const hrvFromDay = row.hrv_ms != null;
-    const effHrv = row.hrv_ms ?? row.overnight_hrv_ms;
-    const rhrFromDay = row.resting_hr_bpm != null;
-    const effRhr = row.resting_hr_bpm ?? row.overnight_hr_avg_bpm;
+    // Recovery scores from the sleep-window columns only. Rows are wake-to-wake
+    // cycles, so Apple's calendar-day hrv_ms/resting_hr_bpm describe the night
+    // BEFORE the one this row is about - using them lagged the score a full
+    // cycle. Single source also means a single baseline, retiring the old
+    // same-source segregation (recovery_scores_from_sleep_window_only).
+    const effHrv = row.overnight_hrv_ms;
+    const effRhr = row.overnight_hr_avg_bpm;
 
     if(effHrv == null || effRhr == null){
-      missing.push('HRV/RHR (not enough data to score at all)');
+      missing.push('overnight HRV/HR (no sleep-window data for this night)');
     } else {
       const others = windowRows(row);
-      const hrvBaselineCount = others.filter(r => (hrvFromDay ? r.hrv_ms : r.overnight_hrv_ms) != null).length;
-      const rhrBaselineCount = others.filter(r => (rhrFromDay ? r.resting_hr_bpm : r.overnight_hr_avg_bpm) != null).length;
+      const hrvBaselineCount = others.filter(r => r.overnight_hrv_ms != null).length;
+      const rhrBaselineCount = others.filter(r => r.overnight_hr_avg_bpm != null).length;
       if(hrvBaselineCount < 2 || rhrBaselineCount < 2){
-        missing.push(`enough history of the same type to build a baseline (this day is ${hrvFromDay ? 'day-level' : 'overnight-only'} HRV / ${rhrFromDay ? 'day-level' : 'overnight-only'} RHR - needs 2+ other days of that same kind)`);
+        missing.push('enough history to build a baseline (needs 2+ other nights with overnight HRV and HR)');
       }
     }
     if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
@@ -189,10 +181,8 @@
 
   {#if current}
     {@const rr = current.respiratory_rate_avg != null ? personalZGauge(current, 'respiratory_rate_avg', false) : null}
-    {@const rhrField = effSourceField(current, 'resting_hr_bpm', 'overnight_hr_avg_bpm')}
-    {@const rhr = rhrField ? personalZGauge(current, rhrField, false) : null}
-    {@const hrvField = effSourceField(current, 'hrv_ms', 'overnight_hrv_ms')}
-    {@const hrv = hrvField ? personalZGauge(current, hrvField, true) : null}
+    {@const rhr = current.overnight_hr_avg_bpm != null ? personalZGauge(current, 'overnight_hr_avg_bpm', false) : null}
+    {@const hrv = current.overnight_hrv_ms != null ? personalZGauge(current, 'overnight_hrv_ms', true) : null}
     {@const temp = rangeGauge(cToF(current.wrist_temp_c), 90, 102, 93, 99.5)}
     {@const sleepDur = rangeGauge(current.sleep_total_min, 240, 600, 360, 540)}
     {@const spo2 = rangeGauge(current.overnight_spo2_avg_pct, 88, 100, 95, 100)}
@@ -226,6 +216,12 @@
       </div>
     </div>
 
+    <!--
+      RHR/HRV cards still fall back to the calendar-day columns for the
+      DISPLAYED number when there's no overnight reading - showing 52.1 beats
+      showing a dash. Their status badge stays null in that case, because only
+      the sleep-window value is scored. Don't "fix" the two to match.
+    -->
     <div class="vital-section-title">Health Monitor</div>
     <div class="vital-grid">
       <VitalCard icon="≈" label="RR" value={current.respiratory_rate_avg != null ? round1(current.respiratory_rate_avg) : '—'} unit="rpm"
