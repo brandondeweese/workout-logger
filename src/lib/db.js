@@ -7,6 +7,25 @@ export async function loadExercisesById(){
   return map;
 }
 
+export async function loadExerciseBodyParts(){
+  const [exRes, bpRes, mbpRes] = await Promise.all([
+    sb.from('exercises').select('id,movement_id'),
+    sb.from('body_parts').select('id,name'),
+    sb.from('movement_body_parts').select('movement_id,body_part_id'),
+  ]);
+  const bpNameById = {};
+  (bpRes.data || []).forEach(b => { bpNameById[b.id] = b.name; });
+  const bodyPartsByMovement = {};
+  (mbpRes.data || []).forEach(row => {
+    if(!bodyPartsByMovement[row.movement_id]) bodyPartsByMovement[row.movement_id] = [];
+    const name = bpNameById[row.body_part_id];
+    if(name) bodyPartsByMovement[row.movement_id].push(name);
+  });
+  const map = {};
+  (exRes.data || []).forEach(r => { map[r.id] = bodyPartsByMovement[r.movement_id] || []; });
+  return map;
+}
+
 export async function loadActiveProgram(){
   const { data, error } = await sb.from('programs').select('*').eq('is_active', true).single();
   if(error || !data) return null;

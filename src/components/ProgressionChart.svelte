@@ -4,7 +4,7 @@
   // elsewhere in this app.
   let { points = [] } = $props();
 
-  const W = 320, H = 120, padL = 34, padR = 12, padT = 14, padB = 22;
+  const W = 320, H = 136, padL = 34, padR = 12, padT = 14, padB = 34;
   const chartW = W - padL - padR, chartH = H - padT - padB;
 
   const values = $derived(points.map(p => p.value));
@@ -31,15 +31,15 @@
 {:else}
   <svg viewBox="0 0 {W} {H}" class="prog-chart">
     <text x={padL} y={padT - 2} class="chart-axis-label">{Math.round(maxV)}</text>
-    <text x={padL} y={H - padB + 12} class="chart-axis-label">{Math.round(minV)}</text>
+    <text x={padL} y={padT + chartH + 11} class="chart-axis-label">{Math.round(minV)}</text>
     <path d={pathD} fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
     {#each points as p, i}
       <circle cx={xAt(i)} cy={yAt(p.value)} r={i === points.length - 1 ? 4 : 2.5}
         fill={i === points.length - 1 ? 'var(--accent)' : 'var(--bg)'}
         stroke="var(--accent)" stroke-width="1.5" />
     {/each}
-    <text x={padL} y={H - 4} class="chart-axis-label">{points[0].label}</text>
-    <text x={W - padR} y={H - 4} class="chart-axis-label" text-anchor="end">{points[points.length - 1].label}</text>
+    <text x={padL} y={H - 6} class="chart-axis-label">{points[0].label}</text>
+    <text x={W - padR} y={H - 6} class="chart-axis-label" text-anchor="end">{points[points.length - 1].label}</text>
   </svg>
   {#if latest}
     <div class="chart-latest">Latest: <strong>{latest.value}</strong></div>
