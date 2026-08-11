@@ -205,13 +205,15 @@
         {/if}
       </div>
       <div class="ring-col">
-        <RingStat pct={current.strain_score} label={current.strain_basis === 'workouts' ? 'Strain*' : 'Strain'} mode="accent" size={100} />
+        <!--
+          Strain is training load only, so a null is the normal, meaningful
+          state for a rest day - not a data error. No asterisk: workout-derived
+          is the definition now, not a degraded fallback.
+        -->
+        <RingStat pct={current.strain_score} label="Strain" mode="accent" size={100} />
         {#if current.strain_score == null}
           <button type="button" class="info-btn" onclick={() => toggleMissing('strain')}>i</button>
-          <div class="info-tooltip" class:open={openMissing === 'strain'}>Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
-        {:else if current.strain_basis === 'workouts'}
-          <button type="button" class="info-btn" onclick={() => toggleMissing('strain')}>i</button>
-          <div class="info-tooltip" class:open={openMissing === 'strain'}>Workout-only estimate — counts logged workouts but none of the day's other activity, so the real number is higher. Fills in once this day's full heart rate export lands.</div>
+          <div class="info-tooltip" class:open={openMissing === 'strain'}>No workout with heart rate logged for this cycle. Strain measures training load only — walking and daily activity don't count toward it. If you did train, push that workout from Apple Health.</div>
         {/if}
       </div>
     </div>

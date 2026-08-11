@@ -109,11 +109,16 @@ ON CONFLICT (date) DO UPDATE SET ...;
 A plain `INSERT` will fail on any cycle where a workout landed first. This
 applies to the `health-metrics-sync` skill and to any manual write.
 
-Strain computed this way is a **lower bound** - it sees the workout and none
-of the cycle's other activity. The trigger records that in
-`health_metrics.strain_basis = 'workouts'`, and the app labels the ring
-`Strain*`. It upgrades automatically to a full-cycle score once
-`daily_hr_hourly` is synced for that date.
+**Strain is defined as training load, and this skill is its only source.**
+A cycle with no workout carrying HR samples scores null - that is correct,
+not a gap to fill. Walking, errands and ambient activity deliberately do
+not count; `daily_hr_hourly` is no longer read for Strain at all.
+
+The practical consequence: **if a workout isn't pushed with heart rate, it
+doesn't exist as far as Strain is concerned.** That applies to strength
+sessions too, not just runs - a lift logged by hand in the app, with no
+HealthKit HR, produces no Strain. Push every trained session through this
+skill if the score is meant to be complete.
 
 Never write `strain_score` or `strain_basis` yourself - they are computed.
 

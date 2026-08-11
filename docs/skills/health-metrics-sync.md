@@ -232,12 +232,16 @@ There is no native 20-minute bucketing option - only hour/day/week/month.
 20-min or finer bucketing is only worth doing for a specific flagged
 window (e.g. a workout), not a whole day.
 
-**This column drives Strain.** When present, Strain is computed from the
-full cycle (`strain_basis = 'daily_hr'`). When absent but a workout with HR
-samples exists for that cycle, the trigger falls back to a workout-only
-estimate (`strain_basis = 'workouts'`), which the app labels as partial
-because it misses all non-workout activity. Writing `daily_hr_hourly`
-upgrades it automatically.
+**This column no longer feeds Strain.** Strain is training load only,
+computed exclusively from workout HR samples written by the
+`workout-metrics` skill. Ambient activity - walking, errands, stress -
+deliberately does not count, and a cycle with no logged workout scores
+null.
+
+Keep syncing `daily_hr_hourly` anyway: it is the only record of ambient
+cardiovascular load, it is what makes the `likely_workout` annotation
+below meaningful, and the resting-HR fallbacks can draw on it. It simply
+isn't a scoring input.
 
 ## Workouts
 
