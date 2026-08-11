@@ -46,6 +46,14 @@
     --radius: 8px;
   }
   *{box-sizing:border-box;}
+  /*
+    Form controls do NOT inherit font-family - browsers give them their own
+    UI font unless told otherwise. Without this every select, text input,
+    set-entry number and button stayed on the system sans after the switch
+    to Maison Mono. Inherit rather than restating the stack, so there's one
+    place to change it.
+  */
+  input, select, textarea, button, optgroup, option{font-family:inherit;}
   body{
     margin:0;
     background:var(--bg);
