@@ -14,7 +14,7 @@
 
   /** @param {string} t */
   function tagDisplay(t){
-    if(t === 'warmup') return '\u{1F525}';
+    if(t === 'warmup') return '▲';
     if(t === 'dropset') return 'D';
     if(t === 'failure') return 'F';
     return setNum;

@@ -6,12 +6,17 @@
   let { active } = $props();
   let rows = $state([]);
   let selectedDate = $state(null);
+  let openMissing = $state(null); // 'recovery' | 'sleep' | 'strain' | null - which ring's missing-factors tooltip is open
 
   // Health stays mounted (never unmounted) so it can't rely on onMount alone -
   // refetch whenever this tab becomes visible, matching History's pattern.
   $effect(() => {
     if(active) loadHealthMetrics().then(r => rows = r);
   });
+
+  function toggleMissing(key){
+    openMissing = (openMissing === key) ? null : key;
+  }
 
   function todayDateString(){
     const d = new Date();
@@ -35,8 +40,8 @@
   const current = $derived(currentIndex >= 0 ? sortedRows[currentIndex] : null);
   const hasPrev = $derived(currentIndex > 0);
   const hasNext = $derived(currentIndex >= 0 && currentIndex < sortedRows.length - 1);
-  function goPrev(){ if(hasPrev) selectedDate = sortedRows[currentIndex - 1].date; }
-  function goNext(){ if(hasNext) selectedDate = sortedRows[currentIndex + 1].date; }
+  function goPrev(){ if(hasPrev){ selectedDate = sortedRows[currentIndex - 1].date; openMissing = null; } }
+  function goNext(){ if(hasNext){ selectedDate = sortedRows[currentIndex + 1].date; openMissing = null; } }
 
   const GREEN = '#6FA87D', AMBER = '#C9A24B';
 
@@ -198,19 +203,22 @@
       <div class="ring-col">
         <RingStat pct={current.recovery_pct} label="Recovery" mode="recovery" size={100} />
         {#if recMissing.length}
-          <div class="missing-note">Missing: {recMissing.join(', ')}</div>
+          <button type="button" class="info-btn" onclick={() => toggleMissing('recovery')}>i</button>
+          <div class="info-tooltip" class:open={openMissing === 'recovery'}>Missing: {recMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
         <RingStat pct={current.sleep_score} label="Sleep" mode="accent" size={100} />
         {#if sleepMissing.length}
-          <div class="missing-note">Missing: {sleepMissing.join(', ')}</div>
+          <button type="button" class="info-btn" onclick={() => toggleMissing('sleep')}>i</button>
+          <div class="info-tooltip" class:open={openMissing === 'sleep'}>Missing: {sleepMissing.join(', ')}</div>
         {/if}
       </div>
       <div class="ring-col">
         <RingStat pct={current.strain_score} label="Strain" mode="accent" size={100} />
         {#if current.strain_score == null}
-          <div class="missing-note">Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
+          <button type="button" class="info-btn" onclick={() => toggleMissing('strain')}>i</button>
+          <div class="info-tooltip" class:open={openMissing === 'strain'}>Missing: continuous heart rate for this day (needs daily_hr_hourly)</div>
         {/if}
       </div>
     </div>
