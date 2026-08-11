@@ -62,7 +62,7 @@ Notes:
 - HealthKit returns these newest-first. That's fine - consumers sort by
   timestamp before plotting. Don't spend effort reordering.
 - Populate this by default. It drives the in-workout heart rate chart in
-  the app's History tab, and it's the fallback input for Strain (below).
+  the app's History tab, and it is the sole input to Strain (below).
   A ~30 minute workout is a few hundred samples - well within one call, and
   nothing like the 2,000-4,000 samples a full day would be.
 - `hr_avg_bpm` may legitimately differ slightly from the plain mean of the
@@ -73,28 +73,26 @@ Notes:
 
 `workout_logs` has an `AFTER INSERT/UPDATE/DELETE` trigger
 (`trg_sync_strain_for_workout`). When a row carries `hr_samples`, it finds
-the `health_metrics` row for that workout's **recovery cycle** and forces a
-recompute, so Strain reflects the workout immediately.
+the `health_metrics` row for that workout's **local calendar date** and
+forces a recompute, so Strain reflects the workout immediately.
 
 Two consequences worth understanding:
 
-### Cycles, not calendar days
+### Strain lands on the day you trained
 
-`health_metrics` rows are **wake-to-wake** cycles: row `D` spans wake(`D-1`)
-→ wake(`D`). So an 8:39pm run on Aug 10 belongs to the row dated **Aug 11**,
-not Aug 10.
+Strain is attributed to the workout's **local calendar date** - a run at
+8:39pm Monday is Monday's strain.
 
-The mapping is done by the `health_cycle_date_for()` SQL function, which
-reads `health_metrics.sleep_end`. You don't need to compute it - just make
-sure `started_at` is accurate, since that's the input.
+Note this differs from Recovery and Sleep on the same row, which describe the
+wake-to-wake cycle that ended that morning. That is intentional: training
+load belongs to the day you trained, while recovery describes the night that
+just ended. Both live on the row for that date.
 
-If the relevant night's `sleep_end` hasn't been synced yet, the function
-falls back to a calendar-date guess. That resolves itself once the
-`health-metrics-sync` skill fills in `sleep_end`.
+All this needs from you is an accurate `started_at`.
 
 ### It may create a `health_metrics` row
 
-If no `health_metrics` row exists for that cycle, the trigger **inserts
+If no `health_metrics` row exists for that date, the trigger **inserts
 one** with only `date` populated, so Strain has somewhere to live when you
 push a workout before that day's vitals have synced.
 
@@ -106,11 +104,11 @@ INSERT INTO health_metrics (date, ...) VALUES (...)
 ON CONFLICT (date) DO UPDATE SET ...;
 ```
 
-A plain `INSERT` will fail on any cycle where a workout landed first. This
+A plain `INSERT` will fail on any date where a workout landed first. This
 applies to the `health-metrics-sync` skill and to any manual write.
 
 **Strain is defined as training load, and this skill is its only source.**
-A cycle with no workout carrying HR samples scores null - that is correct,
+A day with no workout carrying HR samples scores null - that is correct,
 not a gap to fill. Walking, errands and ambient activity deliberately do
 not count; `daily_hr_hourly` is no longer read for Strain at all.
 
@@ -137,8 +135,7 @@ Never write `strain_score` or `strain_basis` yourself - they are computed.
    workout was imported from somewhere other than HealthKit, set
    `metrics_source` accordingly - e.g. a row populated by a Bevel export.
 7. After writing, `SELECT` the row back and show the user what landed,
-   including the resulting `health_metrics.strain_score` and `strain_basis`
-   for that cycle.
+   including the resulting `health_metrics.strain_score` for that date.
 
 ## Duplicate safety
 
