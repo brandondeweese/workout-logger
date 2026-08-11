@@ -1,3 +1,39 @@
+  /*
+    Only Light/Regular/Bold exist, but the UI uses 550/600/650 throughout.
+    Left to default matching, everything from 550 up snaps to Bold and the
+    whole interface reads heavy. The weight RANGES below place the boundary
+    deliberately: 550 (tabs, meta, link buttons) stays Regular, while 600+
+    (headings, ring values, input numbers) goes Bold.
+  */
+  @font-face{
+    font-family:'Maison Mono';
+    src:url('./fonts/MaisonMono-Light.otf') format('opentype');
+    font-weight:100 350;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Maison Mono';
+    src:url('./fonts/MaisonMono-Regular.otf') format('opentype');
+    font-weight:351 550;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Maison Mono';
+    src:url('./fonts/MaisonMono-Bold.otf') format('opentype');
+    font-weight:551 900;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Maison Mono';
+    src:url('./fonts/MaisonMono-Italic.otf') format('opentype');
+    font-weight:351 550;
+    font-style:italic;
+    font-display:swap;
+  }
+
   :root{
     --bg: #10141A;
     --dark: #0A0D12;
@@ -14,7 +50,7 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Maison Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     -webkit-font-smoothing:antialiased;
     font-size:17px;
     line-height:1.4;
@@ -318,8 +354,18 @@
   .check-grid{display:flex;flex-wrap:wrap;gap:0 18px;}
   .check-grid .check-row{width:auto;}
 
-  .subtabs-row{display:flex;gap:22px;margin:20px 0 18px;border-bottom:1px solid var(--line);}
-  .subtab-item{font-size:14.5px;font-weight:550;color:var(--muted);cursor:pointer;padding-bottom:10px;border-bottom:2px solid transparent;margin-bottom:-1px;-webkit-tap-highlight-color:transparent;}
+  /*
+    Monospace is wider than the old system stack, and four sub-tabs
+    ("Body Parts / Equipment / Movements / Exercises") no longer fit a phone
+    width. Scroll the row rather than wrapping it, so the underline stays on
+    one baseline and the page itself never scrolls sideways.
+  */
+  .subtabs-row{
+    display:flex;gap:22px;margin:20px 0 18px;border-bottom:1px solid var(--line);
+    overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .subtabs-row::-webkit-scrollbar{display:none;}
+  .subtab-item{font-size:14.5px;font-weight:550;color:var(--muted);cursor:pointer;padding-bottom:10px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
   .subtab-item.active{color:var(--text);border-bottom-color:var(--accent);}
   .lib-panel{display:none;}
   .lib-panel.active{display:block;}
