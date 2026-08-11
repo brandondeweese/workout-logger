@@ -1,5 +1,6 @@
 <script>
   import { sb } from '../lib/supabaseClient.js';
+  import { appState } from '../lib/state.svelte.js';
   import LogWorkout from './LogWorkout.svelte';
   import Progress from './Progress.svelte';
   import History from './History.svelte';
@@ -23,7 +24,7 @@
   <header>
     <div>
       <h1>Iron Log</h1>
-      <div class="tag">12-week progressive overload</div>
+      <div class="tag">{appState.activeProgram?.name ?? 'No active program'}</div>
     </div>
     <button type="button" class="signout-btn" onclick={signOut}>Sign out</button>
   </header>
