@@ -21,6 +21,11 @@ Daily/basic columns:
 - `resting_hr_bpm` (numeric) - Apple's calendar-day resting HR.
   **Required** - HR dip depends on it. See below.
 - `step_count` (integer)
+- `body_weight_lb` (numeric) - from `HKQuantityTypeIdentifierBodyMass`.
+  Sync it whenever a new weigh-in exists. It scores every bodyweight exercise
+  (pull-ups, dips, hanging leg raises, TRX) in Strain's volume load - without
+  it those sets count as zero load. Values carry forward, so an occasional
+  weigh-in is enough; it does not need to be daily.
 - `sleep_start`, `sleep_end` (timestamptz) - **`sleep_end` is load-bearing
   beyond this table; see "sleep_end is a contract" below**
 - `sleep_deep_min`, `sleep_rem_min`, `sleep_core_min`, `sleep_awake_min`,
