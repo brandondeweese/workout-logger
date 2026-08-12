@@ -87,6 +87,8 @@ export async function insertLog(entry){
       program_id: entry.program_id,
       program_name: entry.program_name,
       date_iso: entry.dateISO,
+      started_at: entry.startedAt ?? null,
+      ended_at: entry.endedAt ?? null,
       phase: entry.phase,
       day: entry.day,
       duration_min: entry.durationMin,

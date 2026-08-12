@@ -378,11 +378,17 @@
     const durationMin = backdateMode
       ? (backdateDurationMin ? Number(backdateDurationMin) : null)
       : getWorkoutDurationMin();
+    // Record the clock's real start/end. These are what lets a HealthKit
+    // workout be matched to this session instead of landing as a second row
+    // for the same training - without them there's nothing to match on, since
+    // date_iso used to be the moment Save was tapped, not when you trained.
+    const startedAt = (!backdateMode && workoutStartMs) ? new Date(workoutStartMs).toISOString() : null;
+    const endedAt = (!backdateMode && workoutEndMs) ? new Date(workoutEndMs).toISOString() : null;
     const dateISO = backdateMode
       ? new Date(`${backdateDate}T12:00:00`).toISOString()
-      : new Date().toISOString();
+      : (startedAt ?? new Date().toISOString());
     const entry = {
-      dateISO,
+      dateISO, startedAt, endedAt,
       phase, day, exercises: list, durationMin,
       program_id: appState.activeProgram.id,
       program_name: appState.activeProgram.name,

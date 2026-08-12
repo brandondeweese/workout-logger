@@ -20,8 +20,11 @@
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  // A HealthKit-imported cardio session: no set list, but distance/energy/HR
-  // instead. Hand-logged strength workouts leave metricsSource null.
+  // A lift done with the watch on merges into ONE row carrying both halves,
+  // so these are independent questions rather than an either/or.
+  function hasMetrics(entry){
+    return !!entry.metricsSource;
+  }
   function isCardio(entry){
     return !entry.exercises.length && !!entry.metricsSource;
   }
@@ -73,7 +76,7 @@
         </div>
       </div>
       <div class="hist-detail" class:open={openId === entry.id}>
-        {#if cardio}
+        {#if hasMetrics(entry)}
           <div class="cardio-stats">
             {#if entry.distanceM != null}
               <div class="cardio-stat">
@@ -116,11 +119,10 @@
             <div class="cardio-chart-label">Heart rate</div>
             <HrChart samples={entry.hrSamples} />
           {/if}
-        {:else}
-          {#each entry.exercises as ex}
-            <div class="hist-ex"><b>{ex.name}:</b> <span>{ex.sets.map(s => `${s.weight || '-'}×${s.reps || '-'}`).join(', ')}</span></div>
-          {/each}
         {/if}
+        {#each entry.exercises as ex}
+          <div class="hist-ex"><b>{ex.name}:</b> <span>{ex.sets.map(s => `${s.weight || '-'}×${s.reps || '-'}`).join(', ')}</span></div>
+        {/each}
         <button class="del" onclick={(e) => handleDelete(e, entry.id)}>Delete entry</button>
       </div>
     </div>
