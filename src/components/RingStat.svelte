@@ -43,18 +43,31 @@
     if(pct >= 34) return '#C9A24B';
     return 'var(--danger)';
   });
+
+  // A drop-shadow at the arc's full colour reads as a halo. Knocking it back
+  // to ~35% opacity keeps it as a suggestion of light instead.
+  const glow = $derived(`color-mix(in srgb, ${color} 35%, transparent)`);
 </script>
 
 <div class="ring-stat" style:width="{size}px">
-  <svg viewBox="0 0 120 120" width={size} height={size}>
+  <!--
+    overflow:visible rather than a padded viewBox. The arc's outer edge sits
+    only 3 units inside the viewport, so the glow would otherwise be clipped
+    to a square. Padding the viewBox would fix that but shrink the ring ~15%,
+    and these are already sized to fit exactly three across a 360px screen -
+    so let the glow spill outside the box instead of resizing the ring.
+  -->
+  <svg viewBox="0 0 120 120" width={size} height={size} style="overflow:visible">
     <circle cx="60" cy="60" r={r} fill="none" stroke="var(--line)" stroke-width="10" />
     {#if pct != null}
       <circle
+        class="ring-arc"
         cx="60" cy="60" r={r} fill="none"
         stroke={color} stroke-width="10" stroke-linecap="round"
         stroke-dasharray={circumference}
         stroke-dashoffset={offset}
         transform="rotate(-90 60 60)"
+        style:filter="drop-shadow(0 0 5px {glow})"
       />
     {/if}
   </svg>
