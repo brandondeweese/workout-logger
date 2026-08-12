@@ -44,13 +44,10 @@
     return 'var(--danger)';
   });
 
-  // drop-shadow takes no opacity argument, so softening the glow means handing
-  // it an already-transparent colour. At full strength it reads as a halo;
-  // ~50% keeps it a suggestion of light. Blur radius is on the arc below.
-  //
-  // Keep this syntax exact - a malformed color-mix() invalidates the entire
-  // filter declaration, so the glow disappears completely instead of degrading.
-  const glow = $derived(`color-mix(in srgb, ${color} 50%, transparent)`);
+  // Glow intensity. blur is in SVG user units (the viewBox is 120 wide), so it
+  // scales with the ring rather than being fixed pixels.
+  const GLOW_BLUR = 4;
+  const GLOW_OPACITY = 0.55;
 </script>
 
 <div class="ring-stat" style:width="{size}px">
@@ -64,14 +61,29 @@
   <svg viewBox="0 0 120 120" width={size} height={size} style="overflow:visible">
     <circle cx="60" cy="60" r={r} fill="none" stroke="var(--line)" stroke-width="10" />
     {#if pct != null}
+      <!--
+        The glow is a blurred copy of the arc drawn underneath, rather than a
+        drop-shadow. drop-shadow's colour argument has to be resolved by the
+        filter, and Safari is unreliable with color-mix()/var() there - an
+        unsupported colour invalidates the whole declaration and the glow
+        silently disappears. blur() + opacity have no such dependency, and the
+        glow inherits the arc's stroke automatically.
+      -->
       <circle
-        class="ring-arc"
         cx="60" cy="60" r={r} fill="none"
         stroke={color} stroke-width="10" stroke-linecap="round"
         stroke-dasharray={circumference}
         stroke-dashoffset={offset}
         transform="rotate(-90 60 60)"
-        style:filter="drop-shadow(0 0 5px {glow})"
+        opacity={GLOW_OPACITY}
+        style:filter="blur({GLOW_BLUR}px)"
+      />
+      <circle
+        cx="60" cy="60" r={r} fill="none"
+        stroke={color} stroke-width="10" stroke-linecap="round"
+        stroke-dasharray={circumference}
+        stroke-dashoffset={offset}
+        transform="rotate(-90 60 60)"
       />
     {/if}
   </svg>
