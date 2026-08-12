@@ -44,10 +44,15 @@
     return 'var(--danger)';
   });
 
-  // Glow intensity. blur is in SVG user units (the viewBox is 120 wide), so it
-  // scales with the ring rather than being fixed pixels.
+  // Glow intensity. stdDeviation is in SVG user units (viewBox is 120 wide),
+  // so it scales with the ring rather than being fixed pixels.
   const GLOW_BLUR = 4;
-  const GLOW_OPACITY = 0.55;
+  const GLOW_OPACITY = 0.9;
+
+  // Filters are referenced by id, and three rings render at once - so each
+  // instance needs its own or they'd collide in the document.
+  const uid = $props.id();
+  const glowId = `ring-glow-${uid}`;
 </script>
 
 <div class="ring-stat" style:width="{size}px">
@@ -62,13 +67,21 @@
     <circle cx="60" cy="60" r={r} fill="none" stroke="var(--line)" stroke-width="10" />
     {#if pct != null}
       <!--
-        The glow is a blurred copy of the arc drawn underneath, rather than a
-        drop-shadow. drop-shadow's colour argument has to be resolved by the
-        filter, and Safari is unreliable with color-mix()/var() there - an
-        unsupported colour invalidates the whole declaration and the glow
-        silently disappears. blur() + opacity have no such dependency, and the
-        glow inherits the arc's stroke automatically.
+        A blurred copy of the arc drawn underneath, not a drop-shadow:
+        drop-shadow must resolve a colour argument inside the filter, and
+        Safari is unreliable with color-mix()/var() there - an unsupported
+        colour invalidates the declaration and the glow silently vanishes.
+        This inherits the arc's stroke instead, so nothing needs resolving.
+
+        An SVG <filter> rather than CSS blur(), because a CSS filter clips to
+        a region only 10% beyond the shape, which cut most of the spread off.
+        The explicit region below gives it room to bloom.
       -->
+      <defs>
+        <filter id={glowId} x="-75%" y="-75%" width="250%" height="250%">
+          <feGaussianBlur stdDeviation={GLOW_BLUR} />
+        </filter>
+      </defs>
       <circle
         cx="60" cy="60" r={r} fill="none"
         stroke={color} stroke-width="10" stroke-linecap="round"
@@ -76,7 +89,7 @@
         stroke-dashoffset={offset}
         transform="rotate(-90 60 60)"
         opacity={GLOW_OPACITY}
-        style:filter="blur({GLOW_BLUR}px)"
+        filter="url(#{glowId})"
       />
       <circle
         cx="60" cy="60" r={r} fill="none"
