@@ -44,9 +44,13 @@
     return 'var(--danger)';
   });
 
-  // A drop-shadow at the arc's full colour reads as a halo. Knocking it back
-  // to ~35% opacity keeps it as a suggestion of light instead.
-  const glow = $derived(`color-mix(in srgb, ${color} 35%, transparent)`);
+  // drop-shadow takes no opacity argument, so softening the glow means handing
+  // it an already-transparent colour. At full strength it reads as a halo;
+  // ~50% keeps it a suggestion of light. Blur radius is on the arc below.
+  //
+  // Keep this syntax exact - a malformed color-mix() invalidates the entire
+  // filter declaration, so the glow disappears completely instead of degrading.
+  const glow = $derived(`color-mix(in srgb, ${color} 50%, transparent)`);
 </script>
 
 <div class="ring-stat" style:width="{size}px">
