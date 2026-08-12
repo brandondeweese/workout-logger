@@ -115,7 +115,7 @@
   .select-group{margin-bottom:6px;}
   .exercise{
     padding:10px 0;max-width:100%;
-    border-radius:var(--radius);transition:background .2s ease;
+    border-radius:var(--radius);transition: .2s ease;
   }
   .exercise.complete{background:rgba(108,147,190,0.10); padding:10px;}
   .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -458,8 +458,20 @@
     position:relative;width:9px;height:100%;border-radius:999px;
     background:rgba(255,255,255,0.06);overflow:visible;
   }
-  .vital-gauge-fill{position:absolute;bottom:0;left:0;right:0;border-radius:999px;}
+  /*
+    Only animates when the value CHANGES (stepping between days) - an element
+    created at its final value has nothing to transition from, so first paint
+    stays still. The rings handle their own intro via a tween in RingStat.
+  */
+  .vital-gauge-fill{
+    position:absolute;bottom:0;left:0;right:0;border-radius:999px;
+    transition:height .55s cubic-bezier(.22,1,.36,1), background-color .55s ease;
+  }
   .vital-gauge-dot{
     position:absolute;left:50%;width:14px;height:14px;border-radius:50%;
     background:var(--bg);border:2.5px solid;transform:translate(-50%,50%);
+    transition:bottom .55s cubic-bezier(.22,1,.36,1), border-color .55s ease;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .vital-gauge-fill, .vital-gauge-dot{transition:none;}
   }
