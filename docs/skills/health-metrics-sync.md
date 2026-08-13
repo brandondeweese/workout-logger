@@ -309,8 +309,7 @@ specific narrow window (e.g. one workout).
 Instead: pull native hourly aggregates (`aggregationInterval: "hour"`,
 `queryMode: "statistics"`, `statisticsType: "all"`) - clean buckets
 (avg/min/max/count) in one call, no pagination needed. Store as a
-`daily_hr_hourly` jsonb array (add the column via migration if missing),
-one object per hour:
+`daily_hr_hourly` jsonb array, one object per hour:
 `{"hour_start_local": "HH:MM", "avg": n, "min": n, "max": n}`.
 
 Scope these to the wake-to-wake window (see above), NOT calendar midnight
