@@ -44,7 +44,7 @@ value is corrupt data that looks correct.
 |---|---|
 | `date` | the local calendar date of the cycle |
 | `hrv_ms` | `HKQuantityTypeIdentifierHeartRateVariabilitySDNN`, day average |
-| `resting_hr_bpm` | `HKQuantityTypeIdentifierRestingHeartRate` |
+| `resting_hr_bpm` | `HKQuantityTypeIdentifierRestingHeartRate` - reference only, nothing scores from it |
 | `step_count` | `HKQuantityTypeIdentifierStepCount` |
 | `body_weight_lb` | `HKQuantityTypeIdentifierBodyMass` |
 | `sleep_start`, `sleep_end` | `sleepAnalysis` session bounds |
@@ -69,17 +69,21 @@ and UPDATE. Anything you write is overwritten, so writing them is at best
 pointless and at worst misleads whoever reads the row next.
 
 **HR dip is NOT a column and must never become one.** It is a local
-variable inside the trigger:
+variable inside the trigger, computed from a SINGLE source:
 
 ```
-dip = (prior row's resting_hr_bpm − this row's overnight_hr_min_bpm)
-      ÷ prior row's resting_hr_bpm
+dip = (daytime_resting_hr(yesterday) − this row's overnight_hr_min_bpm)
+      ÷ daytime_resting_hr(yesterday)
 ```
 
-You cannot help dip by calculating it. You help it by writing
-`resting_hr_bpm` on every row, because dip reads it from the **previous**
-day. If dip is missing today, yesterday's `resting_hr_bpm` is null - that
-is the whole story.
+`daytime_resting_hr()` derives yesterday's waking resting HR from that
+row's `daily_hr_hourly` - lowest hourly average outside the sleep window
+and outside workout hours. It deliberately does NOT fall back to
+`resting_hr_bpm`. Mixing the two would z-score a value from one
+measurement against a baseline built from the other.
+
+So: dip needs `daily_hr_hourly` and `sleep_start`/`sleep_end` on the
+PREVIOUS day, plus `overnight_hr_min_bpm` on this one. Nothing else.
 
 ## Column reference (types, for reading rows)
 
@@ -88,8 +92,8 @@ Daily/basic columns:
 - `hrv_ms` (numeric) - Apple's calendar-day HRV average. Stored for
   reference; **nothing scores from it** (see "Which columns feed which
   score" below).
-- `resting_hr_bpm` (numeric) - Apple's calendar-day resting HR.
-  **Required** - HR dip depends on it. See below.
+- `resting_hr_bpm` (numeric) - Apple's calendar-day resting HR. Reference
+  only; nothing scores from it. HR dip does NOT read it.
 - `step_count` (integer)
 - `body_weight_lb` (numeric) - from `HKQuantityTypeIdentifierBodyMass`.
   Sync it whenever a new weigh-in exists. It scores every bodyweight exercise
@@ -192,28 +196,19 @@ Practical consequence: **a cycle with no overnight vitals gets no Recovery
 score.** That is intended. A score built from the wrong night is worse
 than no score.
 
-### Still always write `resting_hr_bpm`
+### What HR dip actually needs
 
-Even though Recovery no longer reads it, `resting_hr_bpm` is required for
-**HR dip**:
+Not `resting_hr_bpm`. Dip derives yesterday's daytime resting HR from
+yesterday's `daily_hr_hourly`, so the inputs that matter are:
 
-`dip = (prior day's resting_hr_bpm − this night's overnight low) / prior day's resting_hr_bpm`
+- `daily_hr_hourly` on the previous row
+- `sleep_start` / `sleep_end` on the previous row (used to exclude sleeping
+  hours from the derivation)
+- `overnight_hr_min_bpm` on this row
 
-Dip compares a **daytime** resting HR against the overnight low, so it
-needs the calendar-day measurement by definition, and it needs it on the
-*previous* row. If yesterday's `resting_hr_bpm` is null, dip cannot be
-computed today. Dip feeds both Recovery and Sleep.
-
-This column has been silently skipped on recent syncs - don't.
-
-Pull `HKQuantityTypeIdentifierRestingHeartRate` for the complete day `D-1`
-(per the calendar-day rule above). `hrv_ms` is still worth storing as
-reference data, but nothing scores from it.
-
-If HealthKit genuinely has no value, leave it **null** - do **not**
-substitute `overnight_hr_avg_bpm` for `resting_hr_bpm`. They are different
-measurements, and dip is meaningless if both sides come from the same
-overnight window.
+`resting_hr_bpm` and `hrv_ms` are both reference-only. Write them when
+HealthKit has them, leave them null when it doesn't, and never substitute
+one measurement for another.
 
 ## Duplicate and overwrite safety
 
@@ -254,12 +249,11 @@ empty row to fill in, not as evidence the day was already synced.
    don't stop at just `sleep_start`/`sleep_end`. This step has been missed
    before; treat "sync sleep data" as incomplete until these columns are
    populated too.
-   Likewise, do not treat the sync as complete until `resting_hr_bpm` is
-   populated (or confirmed genuinely unavailable) - it has been silently
-   skipped before, and HR dip depends on it being present on the *previous*
-   row. If the overnight vitals are in scope, `overnight_hrv_ms` and
-   `overnight_hr_avg_bpm` are likewise mandatory: without them the cycle
-   gets no Recovery score at all.
+   If the overnight vitals are in scope, `overnight_hrv_ms` and
+   `overnight_hr_avg_bpm` are mandatory - without them the cycle gets no
+   Recovery score at all. `daily_hr_hourly` plus `sleep_start`/`sleep_end`
+   are what HR dip reads off the following day, so a row missing those
+   silently costs tomorrow its dip.
 3. Check the existing row per the "Duplicate and overwrite safety" section
    above - inspect which columns are already populated before writing.
 4. `UPDATE` only the columns you have new data for, or `INSERT ... ON
