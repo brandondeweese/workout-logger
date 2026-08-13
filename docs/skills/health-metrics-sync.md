@@ -11,7 +11,77 @@ Iron Log tables (`programs`, `workout_logs`, `exercises`, etc). One row per
 calendar `date`, upserted (never insert a duplicate row for a date that
 already exists - check first, then INSERT or UPDATE accordingly).
 
-## Table schema (confirmed via information_schema, current as of Aug 2026)
+## STOP. Four rules, no exceptions.
+
+**1. You may ONLY write the columns in the allowlist below.**
+Not "mostly". Not "plus one more that seemed useful". If a value you have
+does not map to an allowlisted column, **you do not write it** - report it
+to the user and stop.
+
+**2. NEVER create a column. NEVER run `ALTER TABLE`, `apply_migration`, or
+any other DDL.** This skill is read/write on rows only. If you believe a
+column is missing, say so and stop. Do not add it.
+
+*(This has already gone wrong: a session computed HR dip, found nowhere to
+put it, created `hr_dip_pct` and `hr_dip_trough_pct`, and wrote them. Those
+columns were read by nothing, and the same session skipped the actual input
+the database needed. They have been dropped.)*
+
+**3. NEVER compute a derived value.** No scores, no percentages, no
+deltas, no dip, no averages-of-averages. Your entire job is landing raw
+measurements. The database derives everything else. If a derived number is
+missing, an **input** is missing - find which one and report it.
+
+**4. NEVER substitute one measurement for another.** If HealthKit has no
+value for a column, write `null` and say so. Do not fill
+`resting_hr_bpm` from `overnight_hr_avg_bpm`, do not fill `hrv_ms` from
+`overnight_hrv_ms`, do not estimate. A null is correct data. A substituted
+value is corrupt data that looks correct.
+
+## The allowlist - the ONLY columns you may write
+
+| column | source |
+|---|---|
+| `date` | the local calendar date of the cycle |
+| `hrv_ms` | `HKQuantityTypeIdentifierHeartRateVariabilitySDNN`, day average |
+| `resting_hr_bpm` | `HKQuantityTypeIdentifierRestingHeartRate` |
+| `step_count` | `HKQuantityTypeIdentifierStepCount` |
+| `body_weight_lb` | `HKQuantityTypeIdentifierBodyMass` |
+| `sleep_start`, `sleep_end` | `sleepAnalysis` session bounds |
+| `sleep_deep_min`, `sleep_rem_min`, `sleep_core_min`, `sleep_awake_min`, `sleep_total_min` | summed per `sleepAnalysis` category |
+| `sleep_efficiency_pct` | asleep ÷ time-in-bed |
+| `overnight_hr_avg_bpm`, `overnight_hr_min_bpm`, `overnight_hr_max_bpm` | HR within the sleep window |
+| `overnight_hrv_ms`, `overnight_hrv_min_ms`, `overnight_hrv_max_ms`, `overnight_hrv_samples` | HRV within the sleep window |
+| `overnight_spo2_avg_pct`, `overnight_spo2_min_pct`, `overnight_spo2_max_pct`, `overnight_spo2_samples` | SpO2 within the sleep window |
+| `respiratory_rate_avg`, `respiratory_rate_min`, `respiratory_rate_max` | respiratory rate within the sleep window |
+| `wrist_temp_c` | `HKQuantityTypeIdentifierAppleSleepingWristTemperature` |
+| `daily_hr_hourly` | hourly HR aggregates - see below |
+| `raw_payload` | `{"source": "<where this came from>"}` |
+
+**Anything not in that table is off limits**, including every column below.
+
+## NEVER write these - the database computes them
+
+`recovery_pct`, `sleep_score`, `strain_score`, `strain_basis`
+
+The `compute_health_scores` trigger recalculates all four on every INSERT
+and UPDATE. Anything you write is overwritten, so writing them is at best
+pointless and at worst misleads whoever reads the row next.
+
+**HR dip is NOT a column and must never become one.** It is a local
+variable inside the trigger:
+
+```
+dip = (prior row's resting_hr_bpm − this row's overnight_hr_min_bpm)
+      ÷ prior row's resting_hr_bpm
+```
+
+You cannot help dip by calculating it. You help it by writing
+`resting_hr_bpm` on every row, because dip reads it from the **previous**
+day. If dip is missing today, yesterday's `resting_hr_bpm` is null - that
+is the whole story.
+
+## Column reference (types, for reading rows)
 
 Daily/basic columns:
 - `date` (date, NOT NULL, unique key for upsert logic)
@@ -45,18 +115,13 @@ pull, not every day):
 - `overnight_spo2_avg_pct`, `overnight_spo2_min_pct`, `overnight_spo2_max_pct`,
   `overnight_spo2_samples` (jsonb array of `{t, value}`)
 
-**Computed by database trigger - never write these:**
+Trigger-computed, never written by this skill:
 - `recovery_pct`, `sleep_score`, `strain_score`, `strain_basis` (text)
 
-The `compute_health_scores` trigger recalculates all four on every INSERT or
-UPDATE. Anything you write to them is overwritten. If a score comes back
-null, the cause is a missing **input**, not a missing score - work backwards
-to which input is absent. (`recovery_pct` was historically computed by hand;
-that is no longer true and should not be reintroduced.)
-
-If a new metric needs a column that doesn't exist yet, use
-`Supabase:apply_migration` with `ADD COLUMN IF NOT EXISTS` rather than
-recreating the table.
+If a score comes back null, the cause is a missing **input**, not a missing
+score - work backwards to which input is absent and report it.
+(`recovery_pct` was historically computed by hand; that is no longer true
+and must not be reintroduced.)
 
 ## ⚠️ The reporting window: wake-to-wake, never past this morning
 
@@ -199,16 +264,39 @@ empty row to fill in, not as evidence the day was already synced.
    above - inspect which columns are already populated before writing.
 4. `UPDATE` only the columns you have new data for, or `INSERT ... ON
    CONFLICT (date) DO UPDATE` if no row exists yet.
-5. Every Supabase call (`execute_sql`, `apply_migration`, etc.) requires the
+5. Every Supabase call requires the
    user's explicit approval via a permission prompt each time - this is
    normal, not an error. If a call returns "No approval received", tell the
    user to approve the pending prompt and retry the same call once they do
    - don't loop retrying without telling them.
-6. After writing, `SELECT` the row back and show the user what was written,
+6. **Verify before claiming success.** Run this and paste the result:
+
+   ```sql
+   -- must return zero rows; anything here is a column that should not exist
+   SELECT column_name FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='health_metrics'
+     AND column_name NOT IN (
+       'id','date','hrv_ms','resting_hr_bpm','step_count','body_weight_lb',
+       'sleep_start','sleep_end','sleep_deep_min','sleep_rem_min',
+       'sleep_core_min','sleep_awake_min','sleep_total_min',
+       'sleep_efficiency_pct','overnight_hr_avg_bpm','overnight_hr_min_bpm',
+       'overnight_hr_max_bpm','overnight_hrv_ms','overnight_hrv_min_ms',
+       'overnight_hrv_max_ms','overnight_hrv_samples','overnight_spo2_avg_pct',
+       'overnight_spo2_min_pct','overnight_spo2_max_pct','overnight_spo2_samples',
+       'respiratory_rate_avg','respiratory_rate_min','respiratory_rate_max',
+       'wrist_temp_c','daily_hr_hourly','raw_payload','created_at',
+       'recovery_pct','sleep_score','strain_score','strain_basis');
+   ```
+
+   If it returns anything, you created a column you should not have. Say so
+   plainly and stop - do not carry on as though the sync succeeded.
+
+7. Then `SELECT` the row back and show the user what was written,
    including the trigger-computed `recovery_pct`, `sleep_score`,
    `strain_score` and `strain_basis`, so they can confirm it landed
    correctly rather than taking it on faith. If any score is null, say which
-   input was missing.
+   INPUT was missing - never present a null score as a failure of the
+   database, and never try to fill it in yourself.
 
 ## Daily (non-sleep) heart rate
 

@@ -43,8 +43,14 @@ set list". Both halves matter.
 Set `metrics_source` to `'healthkit'` for HealthKit pulls, or a descriptive
 string for other origins (e.g. a Bevel export).
 
-If a needed column is missing, add it with `Supabase:apply_migration` using
-`ADD COLUMN IF NOT EXISTS` rather than recreating the table.
+**Never create a column, and never run `ALTER TABLE`, `apply_migration`, or
+any other DDL.** This skill writes rows only. If a value you have doesn't map
+to a column above, report it to the user and stop - do not invent somewhere to
+put it. (A session doing exactly that on `health_metrics` created two columns
+nothing reads, while skipping the input the database actually needed.)
+
+**Never compute a derived value.** No scores, no strain, no estimates. Land
+the raw measurements; the database derives the rest.
 
 ## `hr_samples` format
 
