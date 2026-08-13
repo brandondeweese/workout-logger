@@ -182,12 +182,27 @@
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .add-set-btn:active, .dashed-btn:active{border-color:var(--accent);}
-  .field-wrap{flex:1 1 0;min-width:0;position:relative;}
+  /*
+    Scale the WRAPPER on focus, not the input - the unit label is positioned
+    against it, so scaling the input alone would leave "reps" behind. Transform
+    also avoids reflowing the row the way a padding/font-size change would.
+    z-index keeps the grown field above its neighbours.
+  */
+  .field-wrap{
+    flex:1 1 0;min-width:0;position:relative;
+    transition:transform .16s ease;
+  }
+  .field-wrap:focus-within{transform:scale(1.06);z-index:2;}
+  @media (prefers-reduced-motion: reduce){
+    .field-wrap{transition:none;}
+    .field-wrap:focus-within{transform:none;}
+  }
   .setrow input{
     width:100%;min-width:0;background:var(--dark);
     border:1px solid var(--line);border-radius:var(--radius);
     color:var(--text);padding:12px 14px;font-size:28px;font-weight:600;
     text-align:center;
+    transition:background-color .2s ease, border-color .2s ease, color .2s ease;
   }
   .field-wrap.reps-wrap input{padding-right:44px;}
   .field-wrap .unit{
@@ -195,6 +210,19 @@
     font-size:13px;color:var(--muted);pointer-events:none;
   }
   .setrow input:focus{outline:none;border-color:var(--accent);}
+
+  /*
+    A completed set tints toward the accent, matching the same blue wash a
+    finished exercise gets. It reads as "banked" without going so dim the
+    numbers stop being legible - these still need to be checkable at a glance
+    mid-workout.
+  */
+  .setrow.checked input{
+    background:rgba(108,147,190,0.13);
+    border-color:var(--accent-dim);
+    color:var(--accent);
+  }
+  .setrow.checked .unit{color:var(--accent-dim);}
   .setrow input::placeholder{color:#5B6470;font-size:14px;}
   .setrow select.tag-select{display:none;}
   .tag-wrap{position:relative;flex:0 0 36px;}

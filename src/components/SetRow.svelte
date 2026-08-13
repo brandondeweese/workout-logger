@@ -37,7 +37,7 @@
   }
 </script>
 
-<div class="setrow">
+<div class="setrow" class:checked={checked}>
   <div class="tag-wrap">
     <button type="button" class="set-tag-btn" data-tag={tag} onclick={toggleMenu}>{tagDisplay(tag)}</button>
     <div class="tag-menu" class:open={menuOpen}>
