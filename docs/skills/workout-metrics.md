@@ -5,174 +5,149 @@ description: Log ONE workout session (a run, ride, lift, or other activity) from
 
 # Workout Metrics
 
-Writes **one workout** into the `workout_logs` table in the `workouts`
-Supabase project (project_id `rrqljyhfjoyancgfefcb`), which also holds the
-Iron Log tables (`programs`, `exercises`, `health_metrics`, etc).
+Copy ONE workout from HealthKit into `workout_logs` in Supabase project
+`rrqljyhfjoyancgfefcb`.
 
-This table holds both hand-logged strength sessions (entered in the Iron Log
-app, carrying an `exercises` set list) and HealthKit-imported cardio (no set
-list, but metrics columns populated). This skill writes the latter.
+**Your only job is copying raw numbers into the columns listed below.**
+You do not calculate anything. You do not add columns. You do not compute
+Strain — the database does that from what you write.
 
-## Required columns
+---
 
-`workout_logs` has NOT NULL constraints that apply even to a pure cardio
-import. Every insert must supply:
+## THE MAP
 
-- `program_id` (bigint) - the currently active program. Get it with
-  `SELECT id, name FROM programs WHERE is_active = true`.
-- `program_name` (text) - that program's name, denormalised.
-- `date_iso` (timestamptz) - the workout's start instant. Same value as
-  `started_at` for HealthKit imports.
-- `phase` (text) - the program phase this falls in.
-- `day` (text) - the workout label, e.g. `"Running"`. For cardio, use the
-  activity type.
-- `exercises` (jsonb) - **`'[]'::jsonb`** for cardio. Never null; the app
-  iterates it directly and a null would break History.
+Everything you may write. Nothing else exists for you.
 
-An empty `exercises` array plus a non-null `metrics_source` is exactly how
-the app detects "this is a cardio session, render distance/HR instead of a
-set list". Both halves matter.
+### From the `workoutType` sample
 
-## Metrics columns on workout_logs
+| # | HealthKit source | aggregation | unit conversion | → column |
+|---|---|---|---|---|
+| 1 | `workoutType` activity name | as-is | e.g. `"Running"`, `"Weight Training"` | `activity_type` |
+| 2 | `workoutType` start | as-is | ISO8601 timestamptz | `started_at` |
+| 3 | `workoutType` end | as-is | ISO8601 timestamptz | `ended_at` |
+| 4 | row 2, repeated | as-is | ISO8601 timestamptz | `date_iso` |
+| 5 | `workoutType` duration | as-is | **seconds ÷ 60 = min**, rounded | `duration_min` |
+| 6 | `workoutType` totalDistance | as-is | **meters — do NOT convert to miles** | `distance_m` |
+| 7 | `workoutType` totalEnergyBurned | as-is | kcal | `active_energy_kcal` |
+| 8 | `HKQuantityTypeIdentifierBasalEnergyBurned` | sum within rows 2–3 | kcal | `resting_energy_kcal` |
 
-`activity_type`, `started_at`, `ended_at`, `duration_min`, `distance_m`,
-`active_energy_kcal`, `resting_energy_kcal`, `hr_avg_bpm`, `hr_min_bpm`,
-`hr_max_bpm`, `hr_samples` (jsonb, populated by default - see below),
-`metrics_source`
+### Heart rate — samples BETWEEN `started_at` AND `ended_at` only
 
-Set `metrics_source` to `'healthkit'` for HealthKit pulls, or a descriptive
-string for other origins (e.g. a Bevel export).
+| # | HealthKit source | aggregation | unit conversion | → column |
+|---|---|---|---|---|
+| 9 | `HKQuantityTypeIdentifierHeartRate` | mean | none (bpm) | `hr_avg_bpm` |
+| 10 | `HKQuantityTypeIdentifierHeartRate` | min | none | `hr_min_bpm` |
+| 11 | `HKQuantityTypeIdentifierHeartRate` | max | none | `hr_max_bpm` |
+| 12 | `HKQuantityTypeIdentifierHeartRate` | every sample | `[{"t":"<ISO8601>","bpm":<num>}]` — **`bpm`, not `value`** | `hr_samples` |
 
-**Never create a column, and never run `ALTER TABLE`, `apply_migration`, or
-any other DDL.** This skill writes rows only. If a value you have doesn't map
-to a column above, report it to the user and stop - do not invent somewhere to
-put it. (A session doing exactly that on `health_metrics` created two columns
-nothing reads, while skipping the input the database actually needed.)
+Row 12 is required, not optional. It drives the heart-rate chart in the
+app and is the sole input to Strain for cardio. A ~30 minute workout is a
+few hundred samples — one call, no pagination.
 
-**Never compute a derived value.** No scores, no strain, no estimates. Land
-the raw measurements; the database derives the rest.
+Ordering does not matter; consumers sort by timestamp.
 
-## `hr_samples` format
+### Not from HealthKit — look these up
 
-An array of per-sample readings covering the workout:
+| # | value | → column |
+|---|---|---|
+| 13 | `SELECT id FROM programs WHERE is_active = true` | `program_id` |
+| 14 | that program's `name` | `program_name` |
+| 15 | the program phase this falls in — **ask if unclear, do not guess** | `phase` |
+| 16 | for cardio: same as row 1. For a lift: the split name, e.g. `"Pull"` | `day` |
+| 17 | literal `'[]'::jsonb` for cardio — never null | `exercises` |
+| 18 | literal `'healthkit'` (or the export's name) | `metrics_source` |
 
-```json
-[{"t": "2026-08-11T04:09:54Z", "bpm": 149}]
-```
+Rows 13–17 are `NOT NULL`. An insert without them fails.
 
-Notes:
+---
 
-- **This uses `bpm`, not `value`.** The `health_metrics` overnight sample
-  arrays use `{"t", "value"}`; this column deliberately differs. Consumers
-  accept both, so **do not migrate it** for the sake of consistency.
-- HealthKit returns these newest-first. That's fine - consumers sort by
-  timestamp before plotting. Don't spend effort reordering.
-- Populate this by default. It drives the in-workout heart rate chart in
-  the app's History tab, and it is the sole input to Strain (below).
-  A ~30 minute workout is a few hundred samples - well within one call, and
-  nothing like the 2,000-4,000 samples a full day would be.
-- `hr_avg_bpm` may legitimately differ slightly from the plain mean of the
-  samples (Apple's average is time-weighted over irregular intervals).
-  Don't "correct" one to match the other.
+## FIVE RULES
 
-## This write triggers Strain recalculation
+**1. Copy, never calculate.** If a number isn't in the map, you don't
+produce it. `hr_avg_bpm` may differ slightly from the mean of row 12 —
+Apple time-weights it. Leave both alone.
 
-`workout_logs` has an `AFTER INSERT/UPDATE/DELETE` trigger
-(`trg_sync_strain_for_workout`). When a row carries `hr_samples`, it finds
-the `health_metrics` row for that workout's **local calendar date** and
-forces a recompute, so Strain reflects the workout immediately.
+**2. Never add a column. Never run `ALTER TABLE` or `apply_migration`.**
+The database rejects every write while an unlisted column exists, so doing
+this breaks all logging until someone drops it.
 
-Two consequences worth understanding:
+**3. Missing means `null`** — except rows 13–17, which are required.
 
-### Strain lands on the day you trained
+**4. Never write Strain or any derived value.** Strain lives on
+`health_metrics` and is computed by `compute_health_scores()`. Writing
+your own is impossible here and pointless there.
 
-Strain is attributed to the workout's **local calendar date** - a run at
-8:39pm Monday is Monday's strain.
+**5. `exercises` is `'[]'` for cardio, never null.** Empty array + a
+non-null `metrics_source` is exactly how the app recognises a cardio
+session and renders distance and heart rate instead of a set list.
 
-Note this differs from Recovery and Sleep on the same row, which describe the
-wake-to-wake cycle that ended that morning. That is intentional: training
-load belongs to the day you trained, while recovery describes the night that
-just ended. Both live on the row for that date.
+---
 
-All this needs from you is an accurate `started_at`.
+## WRITING
 
-### It may create a `health_metrics` row
+### Check for a duplicate first
 
-If no `health_metrics` row exists for that date, the trigger **inserts
-one** with only `date` populated, so Strain has somewhere to live when you
-push a workout before that day's vitals have synced.
-
-`health_metrics.date` is `UNIQUE`. Therefore **any later insert into
-`health_metrics` must upsert**:
-
-```sql
-INSERT INTO health_metrics (date, ...) VALUES (...)
-ON CONFLICT (date) DO UPDATE SET ...;
-```
-
-A plain `INSERT` will fail on any date where a workout landed first. This
-applies to the `health-metrics-sync` skill and to any manual write.
-
-**Strain is defined as training load, and this skill is its only source.**
-A day with no workout carrying HR samples scores null - that is correct,
-not a gap to fill. Walking, errands and ambient activity deliberately do
-not count; `daily_hr_hourly` is no longer read for Strain at all.
-
-The practical consequence: **if a workout isn't pushed with heart rate, it
-doesn't exist as far as Strain is concerned.** That applies to strength
-sessions too, not just runs - a lift logged by hand in the app, with no
-HealthKit HR, produces no Strain. Push every trained session through this
-skill if the score is meant to be complete.
-
-Never write `strain_score` or `strain_basis` yourself - they are computed.
-
-## Workflow
-
-1. Pull the workout from HealthKit (`workoutType` sample type): activity
-   type, start/end, duration, distance, energy burned.
-2. Pull the heart rate samples for that exact start→end window and build
-   `hr_samples`, along with `hr_avg_bpm` / `hr_min_bpm` / `hr_max_bpm`.
-3. Look up the active program (`SELECT id, name FROM programs WHERE
-   is_active = true`) and decide `phase` / `day`. Ask the user if the phase
-   isn't obvious rather than guessing.
-4. **Check for an existing row before inserting** - see below.
-5. Insert the row, with `exercises` set to `'[]'::jsonb`.
-6. The Strain trigger fires automatically; no further action needed. If the
-   workout was imported from somewhere other than HealthKit, set
-   `metrics_source` accordingly - e.g. a row populated by a Bevel export.
-7. After writing, `SELECT` the row back and show the user what landed,
-   including the resulting `health_metrics.strain_score` for that date.
-
-## Duplicate safety
-
-There is **no unique constraint** on `workout_logs` - nothing stops you
-inserting the same workout twice, and a duplicate would double-count in
-Strain and clutter History.
-
-Before inserting, check for an overlapping row:
+`workout_logs` has **no unique constraint**. Nothing stops you inserting
+the same workout twice, and a duplicate double-counts in Strain.
 
 ```sql
 SELECT id, activity_type, started_at, ended_at, metrics_source
 FROM workout_logs
-WHERE started_at IS NOT NULL
-  AND started_at < <new_ended_at>
-  AND ended_at   > <new_started_at>;
+WHERE started_at < '<row 3>' AND ended_at > '<row 2>';
 ```
 
-If one exists, `UPDATE` it rather than inserting - and tell the user you
-found an existing row instead of silently overwriting.
+Any result → `UPDATE` that row instead of inserting, and tell the user you
+found one.
 
-## Notes
+### Then insert
 
-- Every Supabase call requires the user's approval via a permission prompt.
-  "No approval received" is not an error - tell the user to approve the
-  pending prompt, then retry once.
-- Multiple workouts in one day are possible; each gets its own row.
-- This table is also written to by the Iron Log app itself (hand-logged
-  strength sessions), by Claude Code, and by manual Bevel imports. Always
-  check for an existing row before inserting.
-- Hand-logged strength rows have a populated `exercises` array and null
-  metrics columns. Don't backfill metrics onto them unless the user asks -
-  the app decides how to render a row from exactly that distinction.
-- Timezone for any local-date reasoning is `America/Los_Angeles`, hardcoded
-  to match the database functions.
+```sql
+INSERT INTO workout_logs (
+  program_id, program_name, date_iso, phase, day, exercises,
+  activity_type, started_at, ended_at, duration_min, distance_m,
+  active_energy_kcal, resting_energy_kcal,
+  hr_avg_bpm, hr_min_bpm, hr_max_bpm, hr_samples, metrics_source
+) VALUES (...);
+```
+
+Each Supabase call needs approval. "No approval received" is not an
+error — ask the user to approve, then retry once.
+
+---
+
+## WHAT HAPPENS NEXT (you do not do any of this)
+
+**A lift you logged in the app merges with this row automatically.** The
+app's row has sets and no metrics; yours has metrics and no sets. A
+`BEFORE INSERT` trigger merges strictly complementary rows whose time
+windows overlap, from whichever side arrives second. Accurate `started_at`
+and `ended_at` are all it needs — that is why rows 2 and 3 matter.
+
+**Strain recalculates.** A trigger finds the `health_metrics` row for this
+workout's **local calendar date** and recomputes. If no row exists it
+creates one with only `date` filled.
+
+**Strain is training load only.** Cardio scores from row 12; lifting
+scores from set volume on the merged row. A day with no logged workout
+scores null — correct, not a gap to fill.
+
+---
+
+## AFTER WRITING
+
+`SELECT` the row back and report, per column, one of: **written**, **null
+(HealthKit had no value)**, or **merged into existing row #N**.
+
+Then show that date's `health_metrics.strain_score`. If it is null, say
+which input was missing. Never fill it in yourself.
+
+---
+
+## NOTES
+
+- Timezone is `America/Los_Angeles`, matching the database functions.
+- `hr_samples` uses `{"t","bpm"}`. `health_metrics` sample arrays use
+  `{"t","value"}`. This difference is deliberate. Do not change either.
+- This skill never writes to `health_metrics`. That is `health-metrics-sync`.
+- The app, Claude Code, and manual imports also write to `workout_logs`.
+  Always check for an existing row first.
