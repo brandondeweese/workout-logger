@@ -130,7 +130,7 @@
     have equal specificity, so .complete must come second to win.
   */
   .exercise:not(.collapsed){background:rgba(108,147,190,0.10);}
-  .exercise.complete{background:rgba(111,168,125,0.13);}
+  .exercise.complete{background:rgba(111,168,125,0.13); padding:10px;}
   /*
     nowrap, so the equipment tag and buttons stay on the header's first line
     instead of being pushed onto their own row. The name column is the one
@@ -182,6 +182,9 @@
   .exercise.collapsed .chevron{transform:rotate(-90deg);}
   .ex-rows{overflow:hidden;max-height:1200px;transition:max-height .22s ease;margin-top:12px;}
   .exercise.collapsed .ex-rows{max-height:0;margin-top:0;}
+  .exercise.collapsed{
+    padding:0; transition:background-color .2s ease, padding .2s ease;
+  }
   /*
     Circular icon button - the round form the check/tag/day-nav controls
     already use, so a labelled pill next to them read as a different species.
