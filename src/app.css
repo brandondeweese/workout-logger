@@ -114,12 +114,17 @@
   #phaseSelect{color:var(--accent);}
   .select-group{margin-bottom:12px;}
   /*
-    Horizontal padding is constant so completing an exercise only changes the
-    background, not the geometry - it used to jump inward by 10px the moment
-    the last set was checked.
+    Negative side margins equal to the padding, so the tinted row spans wider
+    than the text column instead of insetting it. This also keeps the text's
+    left edge fixed: a collapsed card has no padding and no margin, an open one
+    has -10 margin and +10 padding, so content starts at the same x either way
+    and nothing shifts sideways when a card opens.
+
+    max-width is deliberately absent - it would cap the element back to the
+    container width and cancel the bleed.
   */
   .exercise{
-    padding:10px;max-width:100%;margin-bottom:18px;
+    padding:10px;margin:0 -10px 18px;
     border-radius:var(--radius);transition: .2s ease;
   }
   .exercise:last-child{margin-bottom:0;}
@@ -138,7 +143,7 @@
     padding on .complete, so it can't be broken by reordering: this is
     specificity (0,3,0) and beats every other padding rule outright.
   */
-  .exercise.collapsed:not(.complete){padding:0;}
+  .exercise.collapsed:not(.complete){padding:0;margin-left:0;margin-right:0;}
   .ex-head{
     display:block;margin-bottom:0;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
