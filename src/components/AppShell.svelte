@@ -33,19 +33,19 @@
   <div class="tabs">
     <div class="tab" class:active={activeTab === 'health'} onclick={() => activeTab = 'health'}
          role="tab" aria-label="Health" title="Health" aria-selected={activeTab === 'health'}>
-      <TabIcon name="health" />
+      <TabIcon name="health" active={activeTab === 'health'} />
     </div>
     <div class="tab" class:active={activeTab === 'log'} onclick={() => activeTab = 'log'}
          role="tab" aria-label="Workout" title="Workout" aria-selected={activeTab === 'log'}>
-      <TabIcon name="workout" />
+      <TabIcon name="workout" active={activeTab === 'log'} />
     </div>
     <div class="tab" class:active={activeTab === 'progress'} onclick={() => activeTab = 'progress'}
          role="tab" aria-label="Progress" title="Progress" aria-selected={activeTab === 'progress'}>
-      <TabIcon name="progress" />
+      <TabIcon name="progress" active={activeTab === 'progress'} />
     </div>
     <div class="tab" class:active={activeTab === 'more'} onclick={() => activeTab = 'more'}
          role="tab" aria-label="More" title="More" aria-selected={activeTab === 'more'}>
-      <TabIcon name="more" />
+      <TabIcon name="more" active={activeTab === 'more'} />
     </div>
   </div>
 

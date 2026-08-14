@@ -10,7 +10,11 @@
   import ChartLineUpIcon from 'phosphor-svelte/lib/ChartLineUpIcon';
   import DotsThreeIcon from 'phosphor-svelte/lib/DotsThreeIcon';
 
-  let { name, size = 26, weight = 'regular' } = $props();
+  let { name, size = 26, active = false } = $props();
+
+  // Solid when selected, outline otherwise - the fill carries the active state
+  // alongside the colour change and the accent top-border.
+  const weight = $derived(active ? 'fill' : 'regular');
 </script>
 
 {#if name === 'health'}
