@@ -80,6 +80,15 @@
     return `Last: ${lastSet.weight}×${lastSet.reps || '-'} → ${verdict}`;
   });
 
+  // Display names are built as "Movement (Equipment)" by resolveOrCreateExercise,
+  // so split them to give the movement the headline and drop the equipment to a
+  // quieter line beneath. Anything without that shape (older hand-entered names)
+  // just renders whole, with no second line.
+  const nameParts = $derived.by(() => {
+    const m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(exercise.name || '');
+    return m ? { movement: m[1], equipment: m[2] } : { movement: exercise.name, equipment: null };
+  });
+
   const doneCount = $derived(exercise.sets.filter(s => s.checked).length);
   const totalCount = $derived(exercise.sets.length);
   const complete = $derived(doneCount === totalCount && totalCount > 0);
@@ -92,7 +101,10 @@
 <div class="exercise" class:collapsed={collapsed} class:complete={complete}>
   <div class="ex-head" onclick={toggleCollapsed}>
     <div>
-      <div class="ex-name">{exercise.name}</div>
+      <div class="ex-name">{nameParts.movement}</div>
+      {#if nameParts.equipment}
+        <div class="ex-equipment">{nameParts.equipment}</div>
+      {/if}
       <div class="ex-target">{totalCount} sets &middot; {exercise.target}</div>
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>

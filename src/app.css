@@ -113,13 +113,23 @@
     margin-bottom:14px;
   }
   .select-group{margin-bottom:6px;}
+  /*
+    Horizontal padding is constant so completing an exercise only changes the
+    background, not the geometry - it used to jump inward by 10px the moment
+    the last set was checked.
+  */
   .exercise{
-    padding:10px 0;max-width:100%;
+    padding:10px;max-width:100%;margin-bottom:18px;
     border-radius:var(--radius);transition: .2s ease;
   }
-  .exercise.complete{background:rgba(108,147,190,0.10); padding:10px;}
+  .exercise:last-child{margin-bottom:0;}
+  .exercise.complete{background:rgba(108,147,190,0.10);}
   .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-  .ex-name{font-weight:300;font-size:20px;overflow-wrap:break-word;}
+  .ex-name{font-weight:300;font-size:23px;line-height:1.15;overflow-wrap:break-word;}
+  .ex-equipment{
+    font-size:13px;color:var(--muted);margin-top:3px;
+    letter-spacing:0.4px;text-transform:uppercase;overflow-wrap:break-word;
+  }
   #exercises{margin-top:22px;}
   .ex-target{font-size:14px;color:var(--muted);margin-top:3px;}
   .ex-right{display:flex;align-items:center;gap:8px;}
