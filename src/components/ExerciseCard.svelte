@@ -2,6 +2,7 @@
   import { appState } from '../lib/state.svelte.js';
   import SetRow from './SetRow.svelte';
   import ProgressionPanel from './ProgressionPanel.svelte';
+  import EquipmentIcon from './EquipmentIcon.svelte';
 
   let {
     exercise,      // plain read-only { exerciseId, name, target, sets: [...] } - LogWorkout owns the data
@@ -100,21 +101,28 @@
 
 <div class="exercise" class:collapsed={collapsed} class:complete={complete}>
   <div class="ex-head" onclick={toggleCollapsed}>
-    <div>
+    <!--
+      Only the name and controls share a row. The meta and suggestion lines sit
+      below as full-width siblings - inside the flex row they were squeezed into
+      whatever the controls left over.
+    -->
+    <div class="ex-head-top">
       <div class="ex-name">{nameParts.movement}</div>
-      <div class="ex-meta">
-        <span class="ex-target">{totalCount} sets &middot; {exercise.target}</span>
-        <span class="tally">{doneCount}/{totalCount} sets</span>
+      <div class="ex-right">
+        {#if nameParts.equipment}
+          <span class="ex-equipment" title={nameParts.equipment} aria-label={nameParts.equipment}>
+            <EquipmentIcon name={nameParts.equipment} />
+          </span>
+        {/if}
+        <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
+        <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
       </div>
-      {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
-    <div class="ex-right">
-      {#if nameParts.equipment}
-        <div class="ex-equipment">{nameParts.equipment}</div>
-      {/if}
-      <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
-      <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
+    <div class="ex-meta">
+      <span class="ex-target">{totalCount} sets &middot; {exercise.target}</span>
+      <span class="tally">{doneCount}/{totalCount} sets</span>
     </div>
+    {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
   </div>
   {#if openMenuKey === swapMenuKey}
     <div class="swap-panel" onclick={(e) => e.stopPropagation()}>

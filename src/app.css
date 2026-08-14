@@ -139,35 +139,31 @@
     specificity (0,3,0) and beats every other padding rule outright.
   */
   .exercise.collapsed:not(.complete){padding:0;}
-  /*
-    nowrap, so the equipment tag and buttons stay on the header's first line
-    instead of being pushed onto their own row. The name column is the one
-    allowed to shrink (min-width:0 lets a flex child go below its content
-    width); the right group is fixed so the tag truncates before the controls
-    are squeezed.
-  */
   .ex-head{
-    display:flex;justify-content:space-between;align-items:flex-start;
-    margin-bottom:0;flex-wrap:nowrap;gap:10px;
+    display:block;margin-bottom:0;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
-  .ex-head > div:first-child{min-width:0;flex:1 1 auto;}
+  /*
+    Only the name and controls share a row. .ex-meta and .suggestion are
+    siblings BELOW this, so they span the card instead of being squeezed into
+    whatever width the controls leave.
+  */
+  .ex-head-top{
+    display:flex;justify-content:space-between;align-items:center;
+    flex-wrap:nowrap;gap:10px;
+  }
+  .ex-head-top > .ex-name{min-width:0;flex:1 1 auto;}
   .ex-name{font-weight:300;font-size:17px;line-height:1.25;overflow-wrap:break-word;}
   /*
-    Equipment as a tag rather than a caption - dark text on muted blue, same
-    treatment as .badge-active so the two read as one badge family.
-    inline-block so the pill hugs its text instead of spanning the column.
-  */
-  /*
-    Allowed to shrink and ellipsis rather than wrap - a long name like
-    "Plate-Loaded Machine" truncates instead of forcing the row taller.
+    Icon badge - same round footprint as the buttons beside it, so the three
+    read as one row of controls. The equipment name lives on title/aria-label
+    since the glyph alone can't carry it.
   */
   .ex-equipment{
-    flex:0 1 auto;min-width:0;
-    font-size:12px;font-weight:400;
+    flex:0 0 32px;width:32px;height:32px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
     color:var(--bg);background:var(--accent-dim);
-    border-radius:999px;padding:3px 11px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   #exercises{margin-top:22px;}
   /*
@@ -178,12 +174,7 @@
   .ex-meta{display:flex;align-items:baseline;flex-wrap:wrap;row-gap:4px;column-gap:0;margin-top:4px;}
   .ex-meta .tally::before{content:"\00B7";margin:0 8px;color:var(--muted);}
   .ex-target{font-size:14px;color:var(--muted);}
-  /*
-    min-width:0 so the tag inside can actually shrink - without it this group
-    is sized to its content and pushes the name column instead of truncating.
-    The buttons are flex:0 0 auto so only the tag gives way.
-  */
-  .ex-right{display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto;}
+  .ex-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
   .ex-right .icon-btn{flex:0 0 auto;}
   .tally{font-size:13.5px;color:var(--muted);white-space:nowrap;}
   .chevron{font-size:12px;color:var(--muted);transition:transform .18s ease;display:inline-block;}
