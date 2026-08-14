@@ -126,9 +126,16 @@
   .exercise.complete{background:rgba(108,147,190,0.10);}
   .ex-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0;flex-wrap:wrap;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
   .ex-name{font-weight:300;font-size:23px;line-height:1.15;overflow-wrap:break-word;}
+  /*
+    Equipment as a tag rather than a caption - dark text on muted blue, same
+    treatment as .badge-active so the two read as one badge family.
+    inline-block so the pill hugs its text instead of spanning the column.
+  */
   .ex-equipment{
-    font-size:13px;color:var(--muted);margin-top:3px;
-    letter-spacing:0.4px;text-transform:uppercase;overflow-wrap:break-word;
+    display:inline-block;margin-top:7px;
+    font-size:12px;font-weight:400;
+    color:var(--bg);background:var(--accent-dim);
+    border-radius:999px;padding:3px 11px;white-space:nowrap;
   }
   #exercises{margin-top:22px;}
   .ex-target{font-size:14px;color:var(--muted);margin-top:3px;}
