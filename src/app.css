@@ -132,7 +132,7 @@
     inline-block so the pill hugs its text instead of spanning the column.
   */
   .ex-equipment{
-    display:inline-block;margin-top:7px;
+    display:inline-block;flex:0 0 auto;
     font-size:12px;font-weight:400;
     color:var(--bg);background:var(--accent-dim);
     border-radius:999px;padding:3px 11px;white-space:nowrap;

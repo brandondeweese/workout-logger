@@ -102,13 +102,13 @@
   <div class="ex-head" onclick={toggleCollapsed}>
     <div>
       <div class="ex-name">{nameParts.movement}</div>
-      {#if nameParts.equipment}
-        <div class="ex-equipment">{nameParts.equipment}</div>
-      {/if}
       <div class="ex-target">{totalCount} sets &middot; {exercise.target}</div>
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
     <div class="ex-right">
+      {#if nameParts.equipment}
+        <div class="ex-equipment">{nameParts.equipment}</div>
+      {/if}
       <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
       <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
       <div class="tally">{doneCount}/{totalCount} sets</div>
