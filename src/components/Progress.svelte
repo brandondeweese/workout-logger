@@ -120,7 +120,6 @@
       <div class="exercise" class:collapsed={openId !== `cardio:${t}`}>
         <div class="ex-head" onclick={() => toggleOpen(`cardio:${t}`)}>
           <div class="ex-name">{t}</div>
-          <span class="chevron">&#9662;</span>
         </div>
         <div class="ex-rows">
           <CardioPanel activityType={t} />
@@ -132,7 +131,6 @@
       <div class="exercise" class:collapsed={openId !== `ex:${ex.exerciseId}`}>
         <div class="ex-head" onclick={() => toggleOpen(`ex:${ex.exerciseId}`)}>
           <div class="ex-name">{ex.name}</div>
-          <span class="chevron">&#9662;</span>
         </div>
         <div class="ex-rows">
           <ProgressionPanel exerciseId={ex.exerciseId} />
