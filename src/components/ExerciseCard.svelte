@@ -73,11 +73,12 @@
     const lastW = parseFloat(lastSet.weight);
     const lastR = parseInt(lastSet.reps, 10);
     if(isNaN(lastW)) return '';
+    // Just the verdict. The last session's sets are a tap away on the
+    // Progression subtab, so restating them here only crowded the line.
     const targetReps = parseLeadingNumber(exercise.target);
-    const verdict = (!isNaN(lastR) && targetReps && lastR >= targetReps)
+    return (!isNaN(lastR) && targetReps && lastR >= targetReps)
       ? `try ${lastW + increment}`
       : `hold at ${lastW}`;
-    return `Last: ${lastSet.weight}×${lastSet.reps || '-'} → ${verdict}`;
   });
 
   // Display names are built as "Movement (Equipment)" by resolveOrCreateExercise,
