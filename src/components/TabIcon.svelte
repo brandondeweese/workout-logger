@@ -3,16 +3,14 @@
   // so AppShell keeps passing a tab key rather than importing four icons and
   // repeating the weight/size on each.
   //
-  // Duotone renders a filled layer at low opacity behind the stroke, so the
-  // icon reads as an accent tint rather than pure line art. `color` is
-  // currentColor by default, which means the active/muted tab colour drives
-  // both layers - no extra state.
+  // `color` defaults to currentColor, so the active/muted tab colour drives
+  // the icon with no extra state.
   import HeartIcon from 'phosphor-svelte/lib/HeartIcon';
   import BarbellIcon from 'phosphor-svelte/lib/BarbellIcon';
   import ChartLineUpIcon from 'phosphor-svelte/lib/ChartLineUpIcon';
   import DotsThreeIcon from 'phosphor-svelte/lib/DotsThreeIcon';
 
-  let { name, size = 26, weight = 'duotone' } = $props();
+  let { name, size = 26, weight = 'regular' } = $props();
 </script>
 
 {#if name === 'health'}
