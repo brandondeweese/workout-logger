@@ -138,7 +138,13 @@
     border-radius:999px;padding:3px 11px;white-space:nowrap;
   }
   #exercises{margin-top:22px;}
-  .ex-meta{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:4px;}
+  /*
+    Bullet lives on .tally's ::before rather than in the markup, so there's no
+    orphaned separator if the tally is ever absent. column-gap is 0 because the
+    bullet's own margins provide the spacing.
+  */
+  .ex-meta{display:flex;align-items:baseline;flex-wrap:wrap;row-gap:4px;column-gap:0;margin-top:4px;}
+  .ex-meta .tally::before{content:"\00B7";margin:0 8px;color:var(--muted);}
   .ex-target{font-size:14px;color:var(--muted);}
   .ex-right{display:flex;align-items:center;gap:8px;}
   .tally{font-size:13.5px;color:var(--muted);white-space:nowrap;}
