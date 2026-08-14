@@ -442,7 +442,7 @@
 
 <div class="select-group">
   <div class="select-label">Phase</div>
-  <select id="phaseSelect" bind:value={phase} onchange={onPhaseChange}>
+  <select id="phaseSelect" class="text-select" bind:value={phase} onchange={onPhaseChange}>
     {#each phaseNames as p, i}
       <option value={p}>{p}{i < currentPhaseIndex ? ' ✓ completed' : (i === currentPhaseIndex ? ' (current)' : '')}</option>
     {/each}
@@ -450,7 +450,7 @@
 </div>
 <div class="select-group">
   <div class="select-label">Day</div>
-  <select id="daySelect" bind:value={day} onchange={onDayChange}>
+  <select id="daySelect" class="text-select" bind:value={day} onchange={onDayChange}>
     {#each dayNames as d}<option value={d}>{d}</option>{/each}
   </select>
 </div>

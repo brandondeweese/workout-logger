@@ -109,8 +109,8 @@
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
     <div class="ex-right">
-      <button type="button" class="link-btn swap-trigger" onclick={openSwapPanel}>Swap</button>
-      <button type="button" class="link-btn swap-trigger danger-trigger" onclick={removeExercise}>Remove</button>
+      <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
+      <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
       <div class="tally">{doneCount}/{totalCount} sets</div>
       <span class="chevron">&#9662;</span>
     </div>

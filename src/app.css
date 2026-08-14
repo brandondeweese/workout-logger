@@ -105,14 +105,14 @@
     font-size:11px;letter-spacing:0.6px;text-transform:uppercase;
     color:var(--muted);margin-bottom:4px;
   }
-  #phaseSelect{
-    color:var(--accent);
-  }
-  #daySelect{
-    color:var(--text);
-    margin-bottom:14px;
-  }
-  .select-group{margin-bottom:6px;}
+  /*
+    Phase/Day now use .text-select, the same boxed control as the Progress
+    filter. Only the accent tint on Phase is kept - the old bare-underline
+    styling (transparent, no border, arrow hard against the edge) is gone,
+    so these must not re-specify padding or the arrow position.
+  */
+  #phaseSelect{color:var(--accent);}
+  .select-group{margin-bottom:12px;}
   /*
     Horizontal padding is constant so completing an exercise only changes the
     background, not the geometry - it used to jump inward by 10px the moment
@@ -138,14 +138,23 @@
   .exercise.collapsed .chevron{transform:rotate(-90deg);}
   .ex-rows{overflow:hidden;max-height:1200px;transition:max-height .22s ease;margin-top:12px;}
   .exercise.collapsed .ex-rows{max-height:0;margin-top:0;}
-  .link-btn.swap-trigger{
-    font-size:12px;font-weight:600;color:var(--accent);
-    border:1px solid var(--accent-dim);border-radius:999px;
-    padding:5px 11px;white-space:nowrap;
+  /*
+    Circular icon button - the round form the check/tag/day-nav controls
+    already use, so a labelled pill next to them read as a different species.
+    Kept at 32px so it stays a comfortable tap target.
+  */
+  .icon-btn{
+    width:32px;height:32px;flex:0 0 32px;
+    border:1px solid var(--accent-dim);border-radius:50%;
+    background:transparent;color:var(--accent);
+    font-size:16px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
+    transition:background-color .15s ease, border-color .15s ease;
   }
-  .link-btn.swap-trigger:active{background:rgba(108,147,190,0.12);}
-  .link-btn.swap-trigger.danger-trigger{color:var(--danger);border-color:rgba(181,97,94,0.5);}
-  .link-btn.swap-trigger.danger-trigger:active{background:rgba(181,97,94,0.12);}
+  .icon-btn:active{background:rgba(108,147,190,0.14);}
+  .icon-btn.danger{color:var(--danger);border-color:rgba(181,97,94,0.5);font-size:19px;}
+  .icon-btn.danger:active{background:rgba(181,97,94,0.14);}
   .swap-panel{
     display:flex;flex-wrap:wrap;gap:8px;align-items:center;
     margin-top:10px;padding:12px;background:#1B1F26;border:1px solid var(--line);border-radius:var(--radius);
@@ -187,7 +196,7 @@
   .remove-set-btn:active{border-color:var(--danger);color:var(--danger);}
   .add-set-btn, .dashed-btn{
     display:block;width:100%;margin-top:10px;padding:10px;
-    background:transparent;border:1px dashed var(--line);border-radius:var(--radius);
+    background:transparent;border:1px dashed var(--line);border-radius:999px;
     color:var(--accent);font-size:14px;font-weight:600;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
@@ -298,7 +307,7 @@
   .prog-tag.dropset{color:#C9A24B;}
   .prog-tag.failure{color:var(--danger);}
   .btn{
-    display:block;width:100%;padding:15px;border:none;border-radius:var(--radius);
+    display:block;width:100%;padding:15px;border:none;border-radius:999px;
     font-weight:650;font-size:16px;
     cursor:pointer;margin-top:24px;-webkit-tap-highlight-color:transparent;
   }
@@ -334,7 +343,7 @@
   .clockbar .clock-time{font-size:26px;font-weight:600;margin-top:3px;}
   .clockbar button{
     background:transparent;color:var(--accent);border:1px solid var(--accent-dim);
-    border-radius:var(--radius);padding:10px 16px;font-weight:550;font-size:14.5px;
+    border-radius:999px;padding:10px 20px;font-weight:550;font-size:14.5px;
     cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .clockbar button.ended{color:var(--muted);border-color:var(--line);}
