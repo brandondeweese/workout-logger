@@ -102,7 +102,10 @@
   <div class="ex-head" onclick={toggleCollapsed}>
     <div>
       <div class="ex-name">{nameParts.movement}</div>
-      <div class="ex-target">{totalCount} sets &middot; {exercise.target}</div>
+      <div class="ex-meta">
+        <span class="ex-target">{totalCount} sets &middot; {exercise.target}</span>
+        <span class="tally">{doneCount}/{totalCount} sets</span>
+      </div>
       {#if suggestion}<div class="suggestion">{suggestion}</div>{/if}
     </div>
     <div class="ex-right">
@@ -111,7 +114,6 @@
       {/if}
       <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
       <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
-      <div class="tally">{doneCount}/{totalCount} sets</div>
       <span class="chevron">&#9662;</span>
     </div>
   </div>
