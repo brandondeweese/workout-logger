@@ -44,6 +44,7 @@
     --accent-dim: #435E7A;
     --danger: #B5615E;
     --radius: 8px;
+    --gutter: 20px;
   }
   *{box-sizing:border-box;}
   /*
@@ -64,7 +65,13 @@
     line-height:1.4;
   }
   html{width:100%;overflow-x:hidden;}
-  .wrap{max-width:600px;margin:0 auto;padding:32px 20px 170px;width:100%;}
+  /*
+    No side padding here - the gutter moved onto .gutter/.tab-panel so that
+    individual rows (the exercise cards) can span the full screen width by
+    cancelling it, rather than being permanently boxed in by an ancestor.
+  */
+  .wrap{max-width:600px;margin:0 auto;padding:32px 0 170px;width:100%;}
+  .gutter, .tab-panel{padding-left:var(--gutter);padding-right:var(--gutter);}
   header{
     margin-bottom:26px;
     display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
@@ -114,18 +121,17 @@
   #phaseSelect{color:var(--accent);}
   .select-group{margin-bottom:12px;}
   /*
-    Negative side margins equal to the padding, so the tinted row spans wider
-    than the text column instead of insetting it. This also keeps the text's
-    left edge fixed: a collapsed card has no padding and no margin, an open one
-    has -10 margin and +10 padding, so content starts at the same x either way
-    and nothing shifts sideways when a card opens.
+    Full-bleed row: negative margins cancel the .tab-panel gutter so the tinted
+    band reaches both screen edges, while an equal padding puts the text back
+    on the same line as every other element. Only the VERTICAL padding toggles
+    with state, so nothing ever shifts sideways.
 
-    max-width is deliberately absent - it would cap the element back to the
-    container width and cancel the bleed.
+    Square corners - a full-bleed row has no visible side edge to round.
   */
   .exercise{
-    padding:10px;margin:0 -10px 18px;
-    border-radius:var(--radius);transition: .2s ease;
+    padding:10px var(--gutter);
+    margin:0 calc(-1 * var(--gutter)) 18px;
+    transition:.2s ease;
   }
   .exercise:last-child{margin-bottom:0;}
   /*
@@ -137,13 +143,10 @@
   .exercise:not(.collapsed){background:rgba(108,147,190,0.10);}
   .exercise.complete{background:rgba(111,168,125,0.13);}
   /*
-    Padding exists whenever the card is tinted - open, complete, or both. The
-    ONE flush case is an unfinished card sitting collapsed, which has no
-    background to inset. Written as a single :not() rather than re-declaring
-    padding on .complete, so it can't be broken by reordering: this is
-    specificity (0,3,0) and beats every other padding rule outright.
+    Vertical padding only when the row is tinted. Horizontal padding is never
+    touched - it is what keeps the text aligned with the rest of the page.
   */
-  .exercise.collapsed:not(.complete){padding:0;margin-left:0;margin-right:0;}
+  .exercise.collapsed:not(.complete){padding-top:0;padding-bottom:0;}
   .ex-head{
     display:block;margin-bottom:0;
     cursor:pointer;-webkit-tap-highlight-color:transparent;

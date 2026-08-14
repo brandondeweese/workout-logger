@@ -21,7 +21,7 @@
 </script>
 
 <div class="wrap">
-  <header>
+  <header class="gutter">
     <div>
       <h1>Iron Log</h1>
       <div class="tag">{appState.activeProgram?.name ?? 'No active program'}</div>
@@ -37,7 +37,7 @@
   </div>
 
   {#if activeTab === 'more'}
-    <div class="subtabs-row">
+    <div class="subtabs-row gutter">
       <div class="subtab-item" class:active={moreTab === 'history'} onclick={() => moreTab = 'history'}>History</div>
       <div class="subtab-item" class:active={moreTab === 'library'} onclick={() => moreTab = 'library'}>Library</div>
       <div class="subtab-item" class:active={moreTab === 'programs'} onclick={() => moreTab = 'programs'}>Programs</div>
@@ -54,22 +54,22 @@
     by two visibility conditions (activeTab === 'more' AND moreTab === 'x')
     instead of one.
   -->
-  <div style:display={activeTab === 'health' ? 'block' : 'none'}>
+  <div class="tab-panel" style:display={activeTab === 'health' ? 'block' : 'none'}>
     <Health active={activeTab === 'health'} />
   </div>
-  <div style:display={activeTab === 'log' ? 'block' : 'none'}>
+  <div class="tab-panel" style:display={activeTab === 'log' ? 'block' : 'none'}>
     <LogWorkout />
   </div>
-  <div style:display={activeTab === 'progress' ? 'block' : 'none'}>
+  <div class="tab-panel" style:display={activeTab === 'progress' ? 'block' : 'none'}>
     <Progress active={activeTab === 'progress'} />
   </div>
-  <div id="historyView" style:display={historyActive ? 'block' : 'none'}>
+  <div id="historyView" class="tab-panel" style:display={historyActive ? 'block' : 'none'}>
     <History active={historyActive} />
   </div>
-  <div style:display={libraryActive ? 'block' : 'none'}>
+  <div class="tab-panel" style:display={libraryActive ? 'block' : 'none'}>
     <Library active={libraryActive} />
   </div>
-  <div style:display={programsActive ? 'block' : 'none'}>
+  <div class="tab-panel" style:display={programsActive ? 'block' : 'none'}>
     <Programs active={programsActive} />
   </div>
 </div>
