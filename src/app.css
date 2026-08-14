@@ -154,25 +154,20 @@
   }
   .ex-head-top > .ex-name{min-width:0;flex:1 1 auto;}
   .ex-name{font-weight:300;font-size:17px;line-height:1.25;overflow-wrap:break-word;}
-  /*
-    Icon badge - same round footprint as the buttons beside it, so the three
-    read as one row of controls. The equipment name lives on title/aria-label
-    since the glyph alone can't carry it.
-  */
-  .ex-equipment{
-    flex:0 0 32px;width:32px;height:32px;
-    display:flex;align-items:center;justify-content:center;
-    border-radius:50%;
-    color:var(--bg);background:var(--accent-dim);
-  }
+  .ex-equipment{font-size:13.5px;color:var(--muted);white-space:nowrap;}
   #exercises{margin-top:22px;}
   /*
     Bullet lives on .tally's ::before rather than in the markup, so there's no
     orphaned separator if the tally is ever absent. column-gap is 0 because the
     bullet's own margins provide the spacing.
   */
+  /*
+    Generic bullet separator: every child except the first gets one, so a row
+    can gain or lose items (equipment, suggestion) without leaving an orphaned
+    separator. column-gap is 0 - the bullet's own margins do the spacing.
+  */
   .ex-meta{display:flex;align-items:baseline;flex-wrap:wrap;row-gap:4px;column-gap:0;margin-top:4px;}
-  .ex-meta .tally::before{content:"\00B7";margin:0 8px;color:var(--muted);}
+  .ex-meta > * + *::before{content:"\00B7";margin:0 8px;color:var(--muted);}
   .ex-target{font-size:14px;color:var(--muted);}
   .ex-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
   .ex-right .icon-btn{flex:0 0 auto;}
@@ -394,7 +389,7 @@
   .backdate-bar{margin-bottom:8px;}
   .backdate-bar .select-group:last-of-type{margin-bottom:10px;}
 
-  .suggestion{font-size:13.5px;color:var(--accent);margin-top:4px;opacity:0.9;}
+  .suggestion{font-size:13.5px;color:var(--accent);opacity:0.9;}
 
   .restbar{
     position:fixed;left:0;right:0;bottom:78px;z-index:20;
