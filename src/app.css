@@ -96,7 +96,11 @@
     transition:color .15s ease;
   }
   .tab svg{display:block;}
-  .tab.active{color:var(--text);border-top-color:var(--accent);}
+  /*
+    Active tab takes the accent blue rather than plain white - the icons draw
+    in currentColor, so this tints the filled glyph and the label together.
+  */
+  .tab.active{color:var(--accent);border-top-color:var(--accent);}
   select{
     width:100%;padding:6px 22px 6px 0;margin-bottom:4px;
     background:transparent;color:var(--text);
