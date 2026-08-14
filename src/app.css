@@ -90,11 +90,12 @@
   }
   .tab{
     flex:1 1 0;display:flex;align-items:center;justify-content:center;
-    font-weight:550;font-size:14.5px;
-    color:var(--muted);cursor:pointer;text-align:center;
+    color:var(--muted);cursor:pointer;
     border-top:2px solid transparent;margin-top:-1px;
     -webkit-tap-highlight-color:transparent;
+    transition:color .15s ease;
   }
+  .tab svg{display:block;}
   .tab.active{color:var(--text);border-top-color:var(--accent);}
   select{
     width:100%;padding:6px 22px 6px 0;margin-bottom:4px;

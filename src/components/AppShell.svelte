@@ -7,6 +7,7 @@
   import Programs from './Programs.svelte';
   import Library from './Library.svelte';
   import Health from './Health.svelte';
+  import TabIcon from './TabIcon.svelte';
 
   let activeTab = $state('health'); // 'health' | 'log' | 'progress' | 'more'
   let moreTab = $state('history'); // which secondary-nav item shows under 'more': 'history' | 'library' | 'programs'
@@ -30,10 +31,22 @@
   </header>
 
   <div class="tabs">
-    <div class="tab" class:active={activeTab === 'health'} onclick={() => activeTab = 'health'}>Health</div>
-    <div class="tab" class:active={activeTab === 'log'} onclick={() => activeTab = 'log'}>Workout</div>
-    <div class="tab" class:active={activeTab === 'progress'} onclick={() => activeTab = 'progress'}>Progress</div>
-    <div class="tab" class:active={activeTab === 'more'} onclick={() => activeTab = 'more'}>More</div>
+    <div class="tab" class:active={activeTab === 'health'} onclick={() => activeTab = 'health'}
+         role="tab" aria-label="Health" title="Health" aria-selected={activeTab === 'health'}>
+      <TabIcon name="health" />
+    </div>
+    <div class="tab" class:active={activeTab === 'log'} onclick={() => activeTab = 'log'}
+         role="tab" aria-label="Workout" title="Workout" aria-selected={activeTab === 'log'}>
+      <TabIcon name="workout" />
+    </div>
+    <div class="tab" class:active={activeTab === 'progress'} onclick={() => activeTab = 'progress'}
+         role="tab" aria-label="Progress" title="Progress" aria-selected={activeTab === 'progress'}>
+      <TabIcon name="progress" />
+    </div>
+    <div class="tab" class:active={activeTab === 'more'} onclick={() => activeTab = 'more'}
+         role="tab" aria-label="More" title="More" aria-selected={activeTab === 'more'}>
+      <TabIcon name="more" />
+    </div>
   </div>
 
   {#if activeTab === 'more'}
