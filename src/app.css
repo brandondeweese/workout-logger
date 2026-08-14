@@ -162,11 +162,6 @@
   .ex-equipment{font-size:13.5px;color:var(--muted);white-space:nowrap;}
   #exercises{margin-top:22px;}
   /*
-    Bullet lives on .tally's ::before rather than in the markup, so there's no
-    orphaned separator if the tally is ever absent. column-gap is 0 because the
-    bullet's own margins provide the spacing.
-  */
-  /*
     Generic bullet separator: every child except the first gets one, so a row
     can gain or lose items (equipment, suggestion) without leaving an orphaned
     separator. column-gap is 0 - the bullet's own margins do the spacing.
