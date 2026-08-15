@@ -96,12 +96,17 @@
     return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   }
   function hasDip(row){
-    // dip compares this row's overnight low against the PRIOR calendar
-    // day's daytime resting HR - the sleep on this row is dated by wake
-    // date (last night's sleep), which followed the day before this one,
-    // not this date's own (possibly-incomplete/future) daytime data.
+    // Mirrors daytime_resting_hr() in the database: dip compares this row's
+    // overnight low against the PRIOR row's daytime resting HR, which is
+    // DERIVED from that row's daily_hr_hourly (lowest waking, non-workout
+    // hour) using its sleep_start/sleep_end to exclude sleeping hours.
+    //
+    // It deliberately does NOT read resting_hr_bpm - that column was dropped
+    // as a dip input when the calculation moved to a single source. Checking
+    // it here reported "missing HR dip" on days the database had scored fine.
     const prior = rows.find(r => r.date === priorDateString(row.date));
-    return prior?.resting_hr_bpm != null && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
+    return !!prior?.daily_hr_hourly && !!prior?.sleep_start && !!prior?.sleep_end
+      && (row.overnight_hr_min_bpm != null || row.overnight_hr_avg_bpm != null);
   }
   // Other rows within the same rolling 30-day window the trigger uses,
   // excluding this row itself.
@@ -156,7 +161,7 @@
       }
     }
     if(row.respiratory_rate_avg == null) missing.push('respiratory rate');
-    if(!hasDip(row)) missing.push("HR dip (needs the prior day's resting HR + an overnight reading)");
+    if(!hasDip(row)) missing.push("HR dip (needs the prior day's hourly HR + sleep times, and an overnight reading)");
     return missing;
   }
   function sleepMissingFactors(row){
