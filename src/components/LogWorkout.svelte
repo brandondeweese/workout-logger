@@ -80,23 +80,65 @@
   const increment = $derived(isLegDay ? 5 : 2.5);
   const locked = $derived(backdateMode ? false : !(workoutStartMs && !workoutEndMs));
 
+  /** Leading integer of a target string like "6-8 reps" -> 6. @param {string} str */
+  function leadingNumber(str){
+    const m = (str || '').match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  // Sets from the most recent session that contains this exercise, anywhere in
+  // the active program. This is what prefills a new workout - set_presets is a
+  // snapshot frozen when the program was built and nothing writes back to it,
+  // so using it meant the form still offered 490x5 long after you'd worked up
+  // to 500x6.
+  function lastLoggedSetsFor(exerciseId){
+    const logs = appState.workoutLogs;
+    for(let i = logs.length - 1; i >= 0; i--){
+      if(logs[i].program_id !== appState.activeProgram?.id) continue;
+      const match = logs[i].exercises.find(e => e.exerciseId === exerciseId);
+      if(match && match.sets.length) return match.sets;
+    }
+    return null;
+  }
+
   function buildExercisesForDay(phaseName, dayName){
     const phaseObj = appState.activeProgram?.structure.find(p => p.name === phaseName);
     const dayObj = phaseObj?.days.find(d => d.name === dayName);
     if(!dayObj) return [];
     const presetKey = `${phaseName}::${dayName}`;
     const presets = appState.activeProgram.set_presets?.[presetKey] || {};
+    // Increment is derived from the day being BUILT, not the reactive `day` -
+    // this runs for phase/day switches too, where they differ.
+    const dayIncrement = /leg/i.test(dayName) ? 5 : 2.5;
     return dayObj.exercises.map(ex => {
       const name = appState.exercisesById[ex.exerciseId] || '(unknown exercise)';
-      const presetSets = presets[name] || null;
+      // History first, program presets only as a fallback for an exercise
+      // that has never been logged.
+      const logged = lastLoggedSetsFor(ex.exerciseId);
+      const sourceSets = logged || presets[name] || null;
+      // Follow the set count actually performed last time, since sets get
+      // added and dropped mid-workout; fall back to the prescribed count when
+      // there's no history to go on.
+      const setCount = sourceSets ? sourceSets.length : ex.sets;
+      const goalReps = leadingNumber(ex.target);
       const sets = [];
-      for(let i = 0; i < ex.sets; i++){
-        const preset = presetSets && presetSets[i];
-        const presetTag = preset ? preset.tag : '';
+      for(let i = 0; i < setCount; i++){
+        const src = sourceSets && sourceSets[i];
+        const srcTag = src ? src.tag : '';
+        const isWarmup = srcTag === 'warmup' || srcTag === 'dropset';
+        const w = src && src.weight != null ? parseFloat(src.weight) : NaN;
+        const r = src && src.reps != null ? parseInt(src.reps, 10) : NaN;
+        // Prefill the SUGGESTION, not last week's number: a working set that
+        // hit the target rep count comes back one increment heavier. Warmups
+        // and dropsets carry over untouched, and presets (no history) are
+        // taken as prescribed.
+        const progress = logged && !isWarmup && !isNaN(w) && !isNaN(r) && goalReps && r >= goalReps;
+        const weight = progress ? String(w + dayIncrement)
+          : (src && src.weight != null ? String(src.weight) : '');
         sets.push({
-          weight: preset && preset.weight != null ? String(preset.weight) : '',
-          reps: preset && preset.reps != null ? String(preset.reps) : '',
-          tag: presetTag === 'working' ? '' : (presetTag || ''),
+          weight,
+          reps: src && src.reps != null ? String(src.reps) : '',
+          tag: srcTag === 'working' ? '' : (srcTag || ''),
           checked: false,
         });
       }
@@ -398,6 +440,10 @@
     status = ok ? 'Workout saved.' : 'Save failed — try again.';
     if(ok){
       clearDraft();
+      // Refresh BEFORE rebuilding: the form now prefills from the last logged
+      // session, so rebuilding first would fill it from the previous workout
+      // and drop the one just saved.
+      await refreshWorkoutLogs();
       exercises = buildExercisesForDay(phase, day);
       workoutStartMs = null;
       workoutEndMs = null;
@@ -410,7 +456,6 @@
       backdateDate = todayDateString();
       backdateDurationMin = '';
       restBarRef?.hide();
-      await refreshWorkoutLogs();
     }
   }
 </script>
