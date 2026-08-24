@@ -1,4 +1,6 @@
 <script>
+  import MinusIcon from 'phosphor-svelte/lib/MinusIcon';
+  import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
   let {
     weight = $bindable(), reps = $bindable(),   // bound directly to the source array element
     tag, checked,
@@ -54,6 +56,6 @@
     <input type="text" inputmode="numeric" placeholder="reps" bind:value={reps} onchange={handleChange}>
     <span class="unit">reps</span>
   </div>
-  <button type="button" class="check-btn" class:checked={checked} onclick={onCheck}>&#10003;</button>
-  <button type="button" class="remove-set-btn" onclick={onRemove}>&minus;</button>
+  <button type="button" class="check-btn" class:checked={checked} onclick={onCheck} aria-label="Complete set"><CheckIcon size={17} weight="bold" /></button>
+  <button type="button" class="remove-set-btn" onclick={onRemove} aria-label="Remove set"><MinusIcon size={14} /></button>
 </div>

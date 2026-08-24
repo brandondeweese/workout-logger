@@ -2,6 +2,8 @@
   import { appState } from '../lib/state.svelte.js';
   import SetRow from './SetRow.svelte';
   import ProgressionPanel from './ProgressionPanel.svelte';
+  import XIcon from 'phosphor-svelte/lib/XIcon';
+  import ArrowsLeftRightIcon from 'phosphor-svelte/lib/ArrowsLeftRightIcon';
 
   let {
     exercise,      // plain read-only { exerciseId, name, target, sets: [...] } - LogWorkout owns the data
@@ -109,8 +111,8 @@
     <div class="ex-head-top">
       <div class="ex-name">{nameParts.movement}</div>
       <div class="ex-right">
-        <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise">&#8646;</button>
-        <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise">&times;</button>
+        <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise"><ArrowsLeftRightIcon size={16} /></button>
+        <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise"><XIcon size={16} /></button>
       </div>
     </div>
     <div class="ex-meta">
