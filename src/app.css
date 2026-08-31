@@ -197,6 +197,9 @@
     transition:background-color .15s ease, border-color .15s ease;
   }
   .icon-btn:active{background:rgba(108,147,190,0.14);}
+  /* first/last exercise - the move that direction isn't available */
+  .icon-btn:disabled{opacity:0.3;cursor:default;}
+  .icon-btn:disabled:active{background:transparent;}
   .icon-btn.danger{color:var(--danger);border-color:rgba(181,97,94,0.5);font-size:19px;}
   .icon-btn.danger:active{background:rgba(181,97,94,0.14);}
   .swap-panel{
@@ -481,7 +484,8 @@
   .builder-ex-row .text-select{flex:1 1 140px;min-width:0;}
   .builder-ex-row .text-input{flex:1 1 70px;min-width:0;}
   .builder-ex-row.saved{font-size:14.5px;color:var(--text);flex-wrap:nowrap;}
-  .builder-ex-row.saved .ex-summary{flex:1 1 auto;overflow-wrap:break-word;}
+  .builder-ex-row.saved .ex-summary{flex:1 1 auto;min-width:0;overflow-wrap:break-word;}
+  .builder-ex-row.saved .icon-btn{flex:0 0 32px;}
 
   /* ---- Health tab ---- */
   .today-hero{padding-bottom:24px;margin-bottom:8px;border-bottom:1px solid var(--line);}

@@ -4,6 +4,8 @@
   import ProgressionPanel from './ProgressionPanel.svelte';
   import XIcon from 'phosphor-svelte/lib/XIcon';
   import ArrowsLeftRightIcon from 'phosphor-svelte/lib/ArrowsLeftRightIcon';
+  import ArrowUpIcon from 'phosphor-svelte/lib/ArrowUpIcon';
+  import ArrowDownIcon from 'phosphor-svelte/lib/ArrowDownIcon';
 
   let {
     exercise,      // plain read-only { exerciseId, name, target, sets: [...] } - LogWorkout owns the data
@@ -21,7 +23,16 @@
     onRemoveSet,    // (setIdx) => void
     onSwapExercise, // (movementId, equipmentId) => void
     onRemoveExercise, // () => void
+    onMove,           // (delta) => void  -1 up, +1 down
+    isFirst,
+    isLast,
   } = $props();
+
+  /** @param {MouseEvent} e @param {number} delta */
+  function move(e, delta){
+    e.stopPropagation();
+    onMove(delta);
+  }
 
   function removeExercise(e){
     e.stopPropagation();
@@ -111,6 +122,17 @@
     <div class="ex-head-top">
       <div class="ex-name">{nameParts.movement}</div>
       <div class="ex-right">
+        <!--
+          Reorder only while collapsed: that's when you're planning the session
+          order. Once a card is open you're working it, and four icons would
+          crowd the header.
+        -->
+        {#if collapsed}
+          <button type="button" class="icon-btn" onclick={(e) => move(e, -1)}
+                  disabled={isFirst} aria-label="Move up" title="Move up"><ArrowUpIcon size={16} /></button>
+          <button type="button" class="icon-btn" onclick={(e) => move(e, 1)}
+                  disabled={isLast} aria-label="Move down" title="Move down"><ArrowDownIcon size={16} /></button>
+        {/if}
         <button type="button" class="icon-btn" onclick={openSwapPanel} aria-label="Swap exercise" title="Swap exercise"><ArrowsLeftRightIcon size={16} /></button>
         <button type="button" class="icon-btn danger" onclick={removeExercise} aria-label="Remove exercise" title="Remove exercise"><XIcon size={16} /></button>
       </div>

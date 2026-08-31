@@ -246,6 +246,18 @@
     exercises.splice(exIdx, 1);
     openMenuKey = null;
   }
+  // Session-only reorder - moves the exercise within THIS workout, leaving the
+  // saved program untouched (same scope as the swap/add flows above). The
+  // {#each} is keyed by exerciseId, so Svelte moves the existing DOM nodes
+  // rather than rebuilding them, and typed-but-unchecked set values survive.
+  // Order is part of `exercises`, so the draft autosave picks it up for free.
+  function handleMoveExercise(exIdx, delta){
+    const to = exIdx + delta;
+    if(to < 0 || to >= exercises.length) return;
+    const [moved] = exercises.splice(exIdx, 1);
+    exercises.splice(to, 0, moved);
+    openMenuKey = null;
+  }
   function handleCheckSet(exIdx, setIdx){
     if(!backdateMode && !(workoutStartMs && !workoutEndMs)){
       status = 'Start the workout to log sets.';
@@ -521,6 +533,9 @@
         onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
         onSwapExercise={(movementId, equipmentId) => handleSwapExercise(exIdx, movementId, equipmentId)}
         onRemoveExercise={() => handleRemoveExercise(exIdx)}
+        onMove={(delta) => handleMoveExercise(exIdx, delta)}
+        isFirst={exIdx === 0}
+        isLast={exIdx === exercises.length - 1}
       />
     {/each}
   </div>
