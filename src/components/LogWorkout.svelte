@@ -1,5 +1,7 @@
 <script>
   import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   import { appState, refreshWorkoutLogs } from '../lib/state.svelte.js';
   import { insertLog, loadCatalogForBuilder, resolveOrCreateExercise } from '../lib/db.js';
   import { loadDraft, saveDraft, clearDraft, queueDraftSave } from '../lib/draft.js';
@@ -31,6 +33,20 @@
   // shuffle the array, and an index would silently start pointing at a
   // different lift. If the id stops resolving the overlay just closes.
   let focusedExId = $state(null);
+  /*
+    A short slide from the right, the direction you came from - it says
+    "deeper into the list", and reversing it on the way out says "back". Kept
+    to 24px and 200ms because this fires on every exercise you tap, and a
+    full-width slide gets tiresome by the eighth one. Out is quicker than in:
+    leaving should feel immediate.
+
+    Reduced motion collapses both to zero. A full-screen slide is exactly the
+    kind of movement the setting exists for.
+  */
+  const reduceMotion = typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const focusIn  = reduceMotion ? { duration: 0 } : { x: 24, opacity: 0, duration: 200, easing: cubicOut };
+  const focusOut = reduceMotion ? { duration: 0 } : { x: 24, opacity: 0, duration: 140, easing: cubicOut };
   const focusedIdx = $derived(
     focusedExId === null ? -1 : exercises.findIndex(e => e.exerciseId === focusedExId)
   );
@@ -573,7 +589,7 @@
 {#if focusedIdx !== -1}
   {@const exercise = exercises[focusedIdx]}
   {@const exIdx = focusedIdx}
-  <div class="ex-focus">
+  <div class="ex-focus" in:fly={focusIn} out:fly={focusOut}>
     <div class="ex-focus-bar gutter">
       <button type="button" class="ex-back" onclick={() => { focusedExId = null; openMenuKey = null; }}>
         <CaretLeftIcon size={18} /><span>{day || 'Workout'}</span>
