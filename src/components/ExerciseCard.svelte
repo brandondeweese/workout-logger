@@ -1,5 +1,6 @@
 <script>
   import { appState } from '../lib/state.svelte.js';
+  import { suggestWeight } from '../lib/progression.js';
   import SetRow from './SetRow.svelte';
   import ProgressionPanel from './ProgressionPanel.svelte';
   import XIcon from 'phosphor-svelte/lib/XIcon';
@@ -81,17 +82,20 @@
 
   const lastSet = $derived(findLastSet(exercise.exerciseId, appState.workoutLogs));
 
+  // Just the verdict - the last session's sets are a tap away on the
+  // Progression subtab. Shares suggestWeight() with the prefill, so the number
+  // shown here is exactly the number already in the field.
   const suggestion = $derived.by(() => {
     if(!lastSet || !lastSet.weight) return '';
     const lastW = parseFloat(lastSet.weight);
     const lastR = parseInt(lastSet.reps, 10);
-    if(isNaN(lastW)) return '';
-    // Just the verdict. The last session's sets are a tap away on the
-    // Progression subtab, so restating them here only crowded the line.
-    const targetReps = parseLeadingNumber(exercise.target);
-    return (!isNaN(lastR) && targetReps && lastR >= targetReps)
-      ? `try ${lastW + increment}`
-      : `hold at ${lastW}`;
+    const s = suggestWeight(lastW, lastR, parseLeadingNumber(exercise.target), increment);
+    if(s == null || !isFinite(s)) return '';
+    if(s > lastW) return `try ${s}`;
+    // A lower number means the rep target went UP - say so, rather than
+    // "hold at", which read as a mistake when the weight had to come down.
+    if(s < lastW) return `drop to ${s}`;
+    return `hold at ${s}`;
   });
 
   // Display names are built as "Movement (Equipment)" by resolveOrCreateExercise,

@@ -3,6 +3,7 @@
   import { appState, refreshWorkoutLogs } from '../lib/state.svelte.js';
   import { insertLog, loadCatalogForBuilder, resolveOrCreateExercise } from '../lib/db.js';
   import { loadDraft, saveDraft, clearDraft, queueDraftSave } from '../lib/draft.js';
+  import { suggestWeight } from '../lib/progression.js';
   import ExerciseCard from './ExerciseCard.svelte';
   import ExercisePicker from './ExercisePicker.svelte';
   import RestBar from './RestBar.svelte';
@@ -86,15 +87,13 @@
     return m ? parseInt(m[0], 10) : null;
   }
 
-  // Sets from the most recent session that contains this exercise, anywhere in
-  // the active program. This is what prefills a new workout - set_presets is a
-  // snapshot frozen when the program was built and nothing writes back to it,
-  // so using it meant the form still offered 490x5 long after you'd worked up
-  // to 500x6.
+  // Sets from the most recent session containing this exercise, in ANY program.
+  // Deliberately not scoped to the active program: an exercise is the same
+  // exercise whichever block it sits in, and scoping it meant the first workout
+  // of a new program prefilled nothing at all despite months of history.
   function lastLoggedSetsFor(exerciseId){
     const logs = appState.workoutLogs;
     for(let i = logs.length - 1; i >= 0; i--){
-      if(logs[i].program_id !== appState.activeProgram?.id) continue;
       const match = logs[i].exercises.find(e => e.exerciseId === exerciseId);
       if(match && match.sets.length) return match.sets;
     }
@@ -128,16 +127,21 @@
         const isWarmup = srcTag === 'warmup' || srcTag === 'dropset';
         const w = src && src.weight != null ? parseFloat(src.weight) : NaN;
         const r = src && src.reps != null ? parseInt(src.reps, 10) : NaN;
-        // Prefill the SUGGESTION, not last week's number: a working set that
-        // hit the target rep count comes back one increment heavier. Warmups
-        // and dropsets carry over untouched, and presets (no history) are
-        // taken as prescribed.
-        const progress = logged && !isWarmup && !isNaN(w) && !isNaN(r) && goalReps && r >= goalReps;
-        const weight = progress ? String(w + dayIncrement)
+        // Prefill the SUGGESTION rather than last week's raw number, converting
+        // through estimated 1RM so a changed rep target moves the weight with
+        // it. Warmups and dropsets carry over untouched, and presets (no
+        // history) are taken as prescribed.
+        const suggested = (logged && !isWarmup) ? suggestWeight(w, r, goalReps, dayIncrement) : null;
+        const weight = suggested != null ? String(suggested)
           : (src && src.weight != null ? String(src.weight) : '');
+        // Last time's reps are only a sensible prefill if they're inside the
+        // new target range; otherwise offer the target itself.
+        const repsInRange = goalReps && !isNaN(r) && r >= goalReps;
+        const reps = (logged && !isWarmup && goalReps && !repsInRange) ? String(goalReps)
+          : (src && src.reps != null ? String(src.reps) : '');
         sets.push({
           weight,
-          reps: src && src.reps != null ? String(src.reps) : '',
+          reps,
           tag: srcTag === 'working' ? '' : (srcTag || ''),
           checked: false,
         });
