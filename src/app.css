@@ -235,6 +235,55 @@
   .ex-rows{overflow:hidden;max-height:1200px;transition:max-height .22s ease;margin-top:12px;}
   .exercise.collapsed .ex-rows{max-height:0;margin-top:0;}
   /*
+    Full-screen view: the tint was the "this one is open" cue in the list, and
+    in here there is nothing to distinguish it from - the card IS the screen.
+    Completion still colours it, because that reads as status, not state.
+  */
+  .exercise.fullscreen{background:none;padding-top:0;margin-bottom:0;}
+  .exercise.fullscreen.complete{background:rgba(111,168,125,0.13);padding-top:10px;}
+  .exercise.fullscreen .ex-head{cursor:default;}
+  .exercise.fullscreen .ex-name{font-size:24px;}
+  /* No collapse animation to run, so let a long progression panel size itself. */
+  .exercise.fullscreen .ex-rows{max-height:none;overflow:visible;}
+
+  /*
+    Tapping an exercise opens it over the still-mounted list rather than
+    replacing it. LogWorkout is never unmounted - see AppShell - and the same
+    reasoning applies one level down: swapping the list out for a detail view
+    would throw away every rep typed into the other cards.
+
+    Below the tab bar (22) and the rest bar (24) on purpose. The exercise owns
+    the page, but the nav stays reachable and the rest clock stays visible.
+  */
+  .ex-focus{
+    position:fixed;inset:0;z-index:21;
+    background:var(--bg);
+    display:flex;flex-direction:column;
+  }
+  .ex-focus-bar{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding-top:14px;padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .ex-back{
+    display:flex;align-items:center;gap:6px;
+    background:none;border:none;padding:0;color:var(--muted);
+    font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .ex-focus-pos{font-size:13px;color:var(--muted);}
+  .ex-focus-body{
+    flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:18px var(--gutter) 170px;
+    max-width:600px;width:100%;margin:0 auto;
+  }
+  .ex-focus-nav{display:flex;gap:10px;margin-top:28px;}
+  .ex-focus-nav .btn{margin-top:0;}
+  .btn-ghost{
+    background:none;color:var(--muted);
+    border:1px solid var(--line);font-weight:400;
+  }
+  .btn-ghost:disabled{opacity:0.35;}
+  /*
     Circular icon button - the round form the check/tag/day-nav controls
     already use, so a labelled pill next to them read as a different species.
     Kept at 32px so it stays a comfortable tap target.
@@ -453,7 +502,7 @@
   .suggestion{font-size:13.5px;color:var(--accent);opacity:0.9;}
 
   .restbar{
-    position:fixed;left:0;right:0;bottom:78px;z-index:20;
+    position:fixed;left:0;right:0;bottom:78px;z-index:24;
     background:#191D24;border-top:1px solid var(--line);
     padding:14px 20px;display:flex;align-items:center;gap:12px;
     transform:translateY(100%);transition:transform .2s ease;

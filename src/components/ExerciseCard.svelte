@@ -27,6 +27,11 @@
     onMove,           // (delta) => void  -1 up, +1 down
     isFirst,
     isLast,
+    // In the list a card is a summary and tapping it opens the full-screen
+    // view; fullscreen renders the sets. One component, two presentations,
+    // so the header can't drift between them.
+    fullscreen = false,
+    onOpen,           // () => void - list mode only
   } = $props();
 
   /** @param {MouseEvent} e @param {number} delta */
@@ -57,9 +62,7 @@
   }
 
   // Purely presentational UI state - not workout data, so not part of the
-  // draft-saved tree (matches the original, which also always started every
-  // exercise collapsed/on-the-Log-subtab on every fresh render).
-  let collapsed = $state(true);
+  // draft-saved tree.
   let activeTab = $state('log');
 
   /** @param {string} str */
@@ -111,13 +114,12 @@
   const totalCount = $derived(exercise.sets.length);
   const complete = $derived(doneCount === totalCount && totalCount > 0);
 
-  function toggleCollapsed(){ collapsed = !collapsed; }
   /** @param {MouseEvent} e @param {string} tab */
   function setTab(e, tab){ e.stopPropagation(); activeTab = tab; }
 </script>
 
-<div class="exercise" class:collapsed={collapsed} class:complete={complete}>
-  <div class="ex-head" onclick={toggleCollapsed}>
+<div class="exercise" class:collapsed={!fullscreen} class:complete={complete} class:fullscreen={fullscreen}>
+  <div class="ex-head" onclick={() => !fullscreen && onOpen?.()}>
     <!--
       Only the name and controls share a row. The meta and suggestion lines sit
       below as full-width siblings - inside the flex row they were squeezed into
@@ -126,12 +128,8 @@
     <div class="ex-head-top">
       <div class="ex-name">{nameParts.movement}</div>
       <div class="ex-right">
-        <!--
-          Reorder only while collapsed: that's when you're planning the session
-          order. Once a card is open you're working it, and four icons would
-          crowd the header.
-        -->
-        {#if collapsed}
+        <!-- Reorder belongs to the list, not the focused view. -->
+        {#if !fullscreen}
           <button type="button" class="icon-btn" onclick={(e) => move(e, -1)}
                   disabled={isFirst} aria-label="Move up" title="Move up"><ArrowUpIcon size={16} /></button>
           <button type="button" class="icon-btn" onclick={(e) => move(e, 1)}
@@ -167,6 +165,7 @@
     </div>
   {/if}
 
+  {#if fullscreen}
   <div class="ex-rows">
     <div class="ex-subtabs">
       <div class="ex-subtab" class:active={activeTab === 'log'} onclick={(e) => setTab(e, 'log')}>Log</div>
@@ -206,4 +205,5 @@
       <ProgressionPanel exerciseId={exercise.exerciseId} {phase} />
     </div>
   </div>
+  {/if}
 </div>

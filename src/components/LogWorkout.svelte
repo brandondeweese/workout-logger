@@ -5,6 +5,7 @@
   import { loadDraft, saveDraft, clearDraft, queueDraftSave } from '../lib/draft.js';
   import { suggestWeight } from '../lib/progression.js';
   import ExerciseCard from './ExerciseCard.svelte';
+  import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
   import ExercisePicker from './ExercisePicker.svelte';
   import RestBar from './RestBar.svelte';
 
@@ -26,6 +27,13 @@
   let clockEnded = $state(false);
   let status = $state('');
   let openMenuKey = $state(null);
+  // The focused exercise is tracked by id, not index: swap/remove/reorder all
+  // shuffle the array, and an index would silently start pointing at a
+  // different lift. If the id stops resolving the overlay just closes.
+  let focusedExId = $state(null);
+  const focusedIdx = $derived(
+    focusedExId === null ? -1 : exercises.findIndex(e => e.exerciseId === focusedExId)
+  );
   let clockInterval = null;
   let restBarRef;
   let draftRestoreDone = false;
@@ -192,9 +200,11 @@
   function onPhaseChange(){
     const days = appState.activeProgram.structure.find(p => p.name === phase)?.days || [];
     day = days[0]?.name || '';
+    focusedExId = null;
     exercises = buildExercisesForDay(phase, day);
   }
   function onDayChange(){
+    focusedExId = null;
     exercises = buildExercisesForDay(phase, day);
   }
 
@@ -237,6 +247,7 @@
       return;
     }
     const setCount = exercises[exIdx].sets.length || 1;
+    const wasFocused = focusedExId === exercises[exIdx].exerciseId;
     exercises[exIdx] = {
       ...exercises[exIdx],
       exerciseId,
@@ -244,6 +255,9 @@
       sets: Array.from({ length: setCount }, () => ({ weight: '', reps: '', tag: '', checked: false })),
       collapsed: false,
     };
+    // The focus overlay tracks the exercise id, and a swap mints a new one -
+    // follow it across, or the overlay would close out from under the swap.
+    if(wasFocused) focusedExId = exerciseId;
     openMenuKey = null;
   }
   function handleRemoveExercise(exIdx){
@@ -326,6 +340,7 @@
     }
     phase = draft.phase;
     day = draft.day;
+    focusedExId = null;
     exercises = buildExercisesForDay(phase, day);
 
     // match by exerciseId, not array position - the active program's exercise
@@ -399,6 +414,7 @@
       const newExercises = buildExercisesForDay(newPhase, newDay);
       phase = newPhase;
       day = newDay;
+      focusedExId = null;
       exercises = newExercises;
       if(!draftRestoreDone){
         draftRestoreDone = true;
@@ -460,6 +476,7 @@
       // session, so rebuilding first would fill it from the previous workout
       // and drop the one just saved.
       await refreshWorkoutLogs();
+      focusedExId = null;
       exercises = buildExercisesForDay(phase, day);
       workoutStartMs = null;
       workoutEndMs = null;
@@ -540,6 +557,7 @@
         onMove={(delta) => handleMoveExercise(exIdx, delta)}
         isFirst={exIdx === 0}
         isLast={exIdx === exercises.length - 1}
+        onOpen={() => { focusedExId = exercise.exerciseId; openMenuKey = null; }}
       />
     {/each}
   </div>
@@ -551,5 +569,46 @@
 
 <button class="btn btn-primary" onclick={handleSave}>Save Workout</button>
 <div class="status">{status}</div>
+
+{#if focusedIdx !== -1}
+  {@const exercise = exercises[focusedIdx]}
+  {@const exIdx = focusedIdx}
+  <div class="ex-focus">
+    <div class="ex-focus-bar gutter">
+      <button type="button" class="ex-back" onclick={() => { focusedExId = null; openMenuKey = null; }}>
+        <CaretLeftIcon size={18} /><span>{day || 'Workout'}</span>
+      </button>
+      <span class="ex-focus-pos">{focusedIdx + 1} / {exercises.length}</span>
+    </div>
+    <div class="ex-focus-body" class:locked={locked}>
+      <ExerciseCard
+        fullscreen
+        {exercise}
+        {exIdx}
+        {phase}
+        {increment}
+        {locked}
+        {openMenuKey}
+        {catalog}
+        onToggleMenu={handleToggleMenu}
+        onCheckSet={(setIdx) => handleCheckSet(exIdx, setIdx)}
+        onAutoStartRest={handleAutoStartRest}
+        onSetField={(setIdx, field, value) => handleSetField(exIdx, setIdx, field, value)}
+        onAddSet={() => handleAddSet(exIdx)}
+        onRemoveSet={(setIdx) => handleRemoveSet(exIdx, setIdx)}
+        onSwapExercise={(movementId, equipmentId) => handleSwapExercise(exIdx, movementId, equipmentId)}
+        onRemoveExercise={() => { handleRemoveExercise(exIdx); focusedExId = null; }}
+        isFirst={true}
+        isLast={true}
+      />
+      <div class="ex-focus-nav">
+        <button type="button" class="btn btn-ghost" disabled={focusedIdx === 0}
+                onclick={() => focusedExId = exercises[focusedIdx - 1].exerciseId}>Previous</button>
+        <button type="button" class="btn btn-ghost" disabled={focusedIdx === exercises.length - 1}
+                onclick={() => focusedExId = exercises[focusedIdx + 1].exerciseId}>Next</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <RestBar bind:this={restBarRef} {phase} />
