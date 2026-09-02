@@ -34,19 +34,18 @@
   // different lift. If the id stops resolving the overlay just closes.
   let focusedExId = $state(null);
   /*
-    A short slide from the right, the direction you came from - it says
-    "deeper into the list", and reversing it on the way out says "back". Kept
-    to 24px and 200ms because this fires on every exercise you tap, and a
-    full-width slide gets tiresome by the eighth one. Out is quicker than in:
-    leaving should feel immediate.
+    Rises from below and settles, dropping back down on the way out. Kept to
+    24px and 200ms because this fires on every exercise you tap, and a
+    full-height sheet slide gets tiresome by the eighth one. Out is quicker
+    than in: leaving should feel immediate.
 
     Reduced motion collapses both to zero. A full-screen slide is exactly the
     kind of movement the setting exists for.
   */
   const reduceMotion = typeof matchMedia === 'function'
     && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const focusIn  = reduceMotion ? { duration: 0 } : { x: 24, opacity: 0, duration: 200, easing: cubicOut };
-  const focusOut = reduceMotion ? { duration: 0 } : { x: 24, opacity: 0, duration: 140, easing: cubicOut };
+  const focusIn  = reduceMotion ? { duration: 0 } : { y: 24, opacity: 0, duration: 200, easing: cubicOut };
+  const focusOut = reduceMotion ? { duration: 0 } : { y: 24, opacity: 0, duration: 140, easing: cubicOut };
   const focusedIdx = $derived(
     focusedExId === null ? -1 : exercises.findIndex(e => e.exerciseId === focusedExId)
   );
