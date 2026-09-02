@@ -1,35 +1,81 @@
   /*
-    Only Light/Regular/Bold exist, but the UI uses 550/600/650 throughout.
-    Left to default matching, everything from 550 up snaps to Bold and the
-    whole interface reads heavy. The weight RANGES below place the boundary
-    deliberately: 550 (tabs, meta, link buttons) stays Regular, while 600+
-    (headings, ring values, input numbers) goes Bold.
+    GT Flexa. Four weights ship (Thin/Light/Regular/Medium) plus a Lazer
+    display cut, so the ranges below are stretched to cover what the
+    stylesheet actually asks for: 100 and 300 land on Thin and Light, 351-500
+    on Regular, and everything 501+ on Medium. Nothing heavier than Medium
+    exists, so what used to be weight 600 is now Medium - deliberately, rather
+    than letting the browser synthesise a fake bold.
+
+    Lazer is not mapped to a weight. It is a display face, not part of the
+    ramp; use it by name where you want it.
   */
   @font-face{
-    font-family:'Maison Mono';
-    src:url('./fonts/MaisonMono-Light.otf') format('opentype');
-    font-weight:100 350;
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Thin.otf') format('opentype');
+    font-weight:100 250;
     font-style:normal;
     font-display:swap;
   }
   @font-face{
-    font-family:'Maison Mono';
-    src:url('./fonts/MaisonMono-Regular.otf') format('opentype');
-    font-weight:351 550;
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Thin-Italic.otf') format('opentype');
+    font-weight:100 250;
+    font-style:italic;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Light.otf') format('opentype');
+    font-weight:251 350;
     font-style:normal;
     font-display:swap;
   }
   @font-face{
-    font-family:'Maison Mono';
-    src:url('./fonts/MaisonMono-Bold.otf') format('opentype');
-    font-weight:551 900;
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Light-Italic.otf') format('opentype');
+    font-weight:251 350;
+    font-style:italic;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Regular.otf') format('opentype');
+    font-weight:351 500;
     font-style:normal;
     font-display:swap;
   }
   @font-face{
-    font-family:'Maison Mono';
-    src:url('./fonts/MaisonMono-Italic.otf') format('opentype');
-    font-weight:351 550;
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Regular-Italic.otf') format('opentype');
+    font-weight:351 500;
+    font-style:italic;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Medium.otf') format('opentype');
+    font-weight:501 900;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa';
+    src:url('./fonts/Flexa-Medium-Italic.otf') format('opentype');
+    font-weight:501 900;
+    font-style:italic;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa Lazer';
+    src:url('./fonts/Flexa-Lazer.otf') format('opentype');
+    font-weight:400;
+    font-style:normal;
+    font-display:swap;
+  }
+  @font-face{
+    font-family:'Flexa Lazer';
+    src:url('./fonts/Flexa-Lazer-Italic.otf') format('opentype');
+    font-weight:400;
     font-style:italic;
     font-display:swap;
   }
@@ -50,16 +96,22 @@
   /*
     Form controls do NOT inherit font-family - browsers give them their own
     UI font unless told otherwise. Without this every select, text input,
-    set-entry number and button stayed on the system sans after the switch
-    to Maison Mono. Inherit rather than restating the stack, so there's one
-    place to change it.
+    set-entry number and button stays on the system sans. Inherit rather than
+    restating the stack, so there's one place to change it.
   */
-  input, select, textarea, button, optgroup, option{font-family:inherit;}
+  input, select, textarea, button, optgroup, option{font-family:inherit;font-variant-numeric:inherit;}
   body{
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family: 'Maison Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Flexa', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    /*
+      Flexa is proportional; Maison Mono was not. Every digit in this app sits
+      in something that updates in place - the rest countdown, set tallies, the
+      ring values - and proportional figures make those jitter as they change.
+      Tabular figures app-wide, so a 1 occupies the same width as an 8.
+    */
+    font-variant-numeric:tabular-nums;
     -webkit-font-smoothing:antialiased;
     font-size:17px;
     line-height:1.4;
@@ -457,10 +509,11 @@
   .check-grid .check-row{width:auto;}
 
   /*
-    Monospace is wider than the old system stack, and four sub-tabs
-    ("Body Parts / Equipment / Movements / Exercises") no longer fit a phone
-    width. Scroll the row rather than wrapping it, so the underline stays on
-    one baseline and the page itself never scrolls sideways.
+    Four sub-tabs ("Body Parts / Equipment / Movements / Exercises") do not
+    fit a phone width. Scroll the row rather than wrapping it, so the
+    underline stays on one baseline and the page never scrolls sideways.
+    (Written when the app was monospace and the row was wider still; Flexa
+    is narrower but four labels plus gaps still overflow a small phone.)
   */
   .subtabs-row{
     display:flex;gap:22px;margin:20px 0 18px;border-bottom:1px solid var(--line);
