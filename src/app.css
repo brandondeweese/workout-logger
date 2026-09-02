@@ -501,13 +501,26 @@
 
   .suggestion{font-size:13.5px;color:var(--accent);opacity:0.9;}
 
+  /*
+    Sits directly above the 78px tab bar, and above the exercise overlay (21)
+    so the clock survives opening an exercise full screen.
+
+    The hide transform has to clear its own height AND the nav beneath it.
+    translateY(100%) alone only moves the bar down by its own height from a
+    78px offset, which parks the whole "hidden" bar squarely on top of the tab
+    bar - opaque, and intercepting every tap. That went unnoticed while this
+    sat at z-index 20, underneath the nav; raising it to 24 put it on top.
+    pointer-events is belt and braces: nothing off-screen should ever take a
+    tap, whatever the transform is doing.
+  */
   .restbar{
     position:fixed;left:0;right:0;bottom:78px;z-index:24;
     background:#191D24;border-top:1px solid var(--line);
     padding:14px 20px;display:flex;align-items:center;gap:12px;
-    transform:translateY(100%);transition:transform .2s ease;
+    transform:translateY(calc(100% + 78px));transition:transform .2s ease;
+    pointer-events:none;
   }
-  .restbar.visible{transform:translateY(0);}
+  .restbar.visible{transform:translateY(0);pointer-events:auto;}
   .restbar .rest-time{
     font-size:24px;font-weight:600;
     flex:0 0 auto;min-width:64px;
