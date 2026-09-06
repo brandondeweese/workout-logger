@@ -10,6 +10,7 @@
   import CaretLeftIcon from 'phosphor-svelte/lib/CaretLeftIcon';
   import ExercisePicker from './ExercisePicker.svelte';
   import RestBar from './RestBar.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let phase = $state('');
   let day = $state('');
@@ -32,6 +33,10 @@
   // The focused exercise is tracked by id, not index: swap/remove/reorder all
   // shuffle the array, and an index would silently start pointing at a
   // different lift. If the id stops resolving the overlay just closes.
+  // Ending the clock locks every field, and until now it took one stray tap.
+  // That is how 2026-09-05 ended up as two rows: the session was cut short,
+  // saved half-finished, and restarted as a second workout.
+  let confirmEnd = $state(false);
   let focusedExId = $state(null);
   /*
     Rises from below and settles, dropping back down on the way out. Kept to
@@ -103,6 +108,9 @@
   const isLegDay = $derived(/leg/i.test(day));
   const increment = $derived(isLegDay ? 5 : 2.5);
   const locked = $derived(backdateMode ? false : !(workoutStartMs && !workoutEndMs));
+  // Greyed out for the whole of a running workout, so the gate in handleSave
+  // is a backstop rather than the thing you discover by tapping.
+  const saveBlocked = $derived(!backdateMode && !!workoutStartMs && !workoutEndMs);
 
   /** Leading integer of a target string like "6-8 reps" -> 6. @param {string} str */
   function leadingNumber(str){
@@ -197,13 +205,20 @@
       clockEnded = false;
       startClockInterval();
     } else {
-      workoutEndMs = Date.now();
-      clearInterval(clockInterval);
-      clockTimeText = fmtHMS(Math.floor((workoutEndMs - workoutStartMs) / 1000));
-      clockLabel = 'Workout Timer (ended)';
-      clockBtnLabel = 'Start New';
-      clockEnded = true;
+      // Starting is free to undo; ending is not, so only this branch asks.
+      confirmEnd = true;
     }
+  }
+
+  function endWorkout(){
+    confirmEnd = false;
+    workoutEndMs = Date.now();
+    clearInterval(clockInterval);
+    clockTimeText = fmtHMS(Math.floor((workoutEndMs - workoutStartMs) / 1000));
+    clockLabel = 'Workout Timer (ended)';
+    clockBtnLabel = 'Start New';
+    clockEnded = true;
+    status = 'Workout ended. Save it when you\'re ready.';
   }
 
   function getWorkoutDurationMin(){
@@ -454,6 +469,14 @@
       if(setData.length) list.push({ exerciseId: ex.exerciseId, name: ex.name, sets: setData });
     });
 
+    // A live workout must be ended before it can be saved. Saving mid-session
+    // wrote ended_at as null and derived duration from "now", which is how one
+    // session became two rows on 2026-09-05. Backdated entries have no clock,
+    // so the gate does not apply to them.
+    if(!backdateMode && workoutStartMs && !workoutEndMs){
+      status = 'End the workout first — tap End Workout above.';
+      return;
+    }
     if(!list.length){
       status = 'Nothing logged — fill in at least one set.';
       return;
@@ -582,8 +605,12 @@
   </div>
 {/if}
 
-<button class="btn btn-primary" onclick={handleSave}>Save Workout</button>
-<div class="status">{status}</div>
+<button class="btn btn-primary" onclick={handleSave} disabled={saveBlocked}>Save Workout</button>
+<!--
+  A disabled button that does nothing when tapped is a mystery, so the status
+  line carries the reason for as long as the button is grey.
+-->
+<div class="status">{saveBlocked ? 'End the workout to save it.' : status}</div>
 
 {#if focusedIdx !== -1}
   {@const exercise = exercises[focusedIdx]}
@@ -627,3 +654,15 @@
 {/if}
 
 <RestBar bind:this={restBarRef} {phase} />
+
+{#if confirmEnd}
+  <ConfirmDialog
+    title="End this workout?"
+    body="The clock stops and every set locks. You'll still need to save it."
+    confirmLabel="End Workout"
+    cancelLabel="Keep Going"
+    danger
+    onConfirm={endWorkout}
+    onCancel={() => confirmEnd = false}
+  />
+{/if}

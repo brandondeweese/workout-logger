@@ -461,6 +461,42 @@
   }
   .btn-primary{background:var(--accent);color:#0C0E12;}
   .btn-primary:active{background:var(--accent-dim);}
+  .btn-danger{background:var(--danger);color:#0C0E12;}
+  /*
+    Save stays visible but inert for the whole of a running workout, so the
+    rule ("end it first") is legible before you tap rather than after.
+  */
+  .btn:disabled{opacity:0.3;cursor:default;}
+  .btn:disabled:active{background:var(--accent);}
+
+  /*
+    Confirm dialog. Above the exercise overlay (21), the tab bar (22) and the
+    rest bar (24): it is asking a question that has to be answered before
+    anything else happens.
+  */
+  .confirm-scrim{
+    position:fixed;inset:0;z-index:30;
+    background:rgba(8,10,14,0.72);
+  }
+  .confirm-wrap{
+    position:fixed;inset:0;z-index:31;
+    display:flex;align-items:center;justify-content:center;
+    padding:var(--gutter);
+  }
+  .confirm-box{
+    width:100%;max-width:380px;
+    background:#191D24;border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px 22px 22px;
+  }
+  .confirm-title{font-size:19px;font-weight:600;line-height:1.3;}
+  .confirm-body{margin-top:10px;color:var(--muted);font-size:15px;line-height:1.45;}
+  /*
+    Side by side, cancel first. The destructive button is not where the thumb
+    rests by default, and it is not the one you hit by continuing to tap in the
+    same place you just tapped.
+  */
+  .confirm-actions{display:flex;gap:10px;margin-top:24px;}
+  .confirm-actions .btn{margin-top:0;font-size:15px;padding:13px;}
   .status{text-align:center;font-size:14px;color:var(--muted);margin-top:12px;min-height:18px;}
   .hist-entry{
     padding:18px 0;border-bottom:1px solid var(--line);max-width:100%;
