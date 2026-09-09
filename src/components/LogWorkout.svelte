@@ -146,15 +146,43 @@
       // that has never been logged.
       const logged = lastLoggedSetsFor(ex.exerciseId);
       const sourceSets = logged || presets[name] || null;
-      // Follow the set count actually performed last time, since sets get
+      const goalReps = leadingNumber(ex.target);
+
+      // Which rows to build, and which historical set each should prefill from.
+      //
+      // Default: follow the count actually performed last time, since sets get
       // added and dropped mid-workout; fall back to the prescribed count when
       // there's no history to go on.
-      const setCount = sourceSets ? sourceSets.length : ex.sets;
-      const goalReps = leadingNumber(ex.target);
+      //
+      // When the program prescribes warmups, that inheritance is wrong. A
+      // warmup logged last week counts toward last week's total, so the next
+      // build hands back the same total and the warmup has permanently eaten a
+      // working set. Single Leg Deadlift decayed to two working sets that way.
+      // With warmupSets set, the count is warmups + working as prescribed, and
+      // history is matched like to like: last week's warmups prefill the warmup
+      // rows, its working sets prefill the working rows.
+      const prescribedWarmups = Number(ex.warmupSets) || 0;
+      let plan;
+      if(prescribedWarmups > 0){
+        const prior = sourceSets || [];
+        const priorWarm = prior.filter(s => s.tag === 'warmup');
+        const priorWork = prior.filter(s => s.tag !== 'warmup');
+        plan = [
+          ...Array.from({ length: prescribedWarmups }, (_, i) => ({ tag: 'warmup', src: priorWarm[i] || null })),
+          ...Array.from({ length: ex.sets },           (_, i) => ({ tag: '',       src: priorWork[i] || null })),
+        ];
+      } else {
+        const setCount = sourceSets ? sourceSets.length : ex.sets;
+        plan = Array.from({ length: setCount }, (_, i) => {
+          const src = (sourceSets && sourceSets[i]) || null;
+          return { tag: src ? src.tag : '', src };
+        });
+      }
+
       const sets = [];
-      for(let i = 0; i < setCount; i++){
-        const src = sourceSets && sourceSets[i];
-        const srcTag = src ? src.tag : '';
+      for(const row of plan){
+        const src = row.src;
+        const srcTag = row.tag;
         const isWarmup = srcTag === 'warmup' || srcTag === 'dropset';
         const w = src && src.weight != null ? parseFloat(src.weight) : NaN;
         const r = src && src.reps != null ? parseInt(src.reps, 10) : NaN;
