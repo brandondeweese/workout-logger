@@ -190,13 +190,17 @@
         // through estimated 1RM so a changed rep target moves the weight with
         // it. Warmups and dropsets carry over untouched, and presets (no
         // history) are taken as prescribed.
-        const suggested = (logged && !isWarmup) ? suggestWeight(w, r, goalReps, dayIncrement) : null;
+        // Non-pound metrics (box height) carry forward untouched - running a
+        // height through an estimated-1RM conversion produces a number that
+        // means nothing.
+        const scalable = (appState.exerciseLoadMetric?.[ex.exerciseId] || 'weight') === 'weight';
+        const suggested = (logged && !isWarmup && scalable) ? suggestWeight(w, r, goalReps, dayIncrement) : null;
         const weight = suggested != null ? String(suggested)
           : (src && src.weight != null ? String(src.weight) : '');
         // Last time's reps are only a sensible prefill if they're inside the
         // new target range; otherwise offer the target itself.
         const repsInRange = goalReps && !isNaN(r) && r >= goalReps;
-        const reps = (logged && !isWarmup && goalReps && !repsInRange) ? String(goalReps)
+        const reps = (logged && !isWarmup && scalable && goalReps && !repsInRange) ? String(goalReps)
           : (src && src.reps != null ? String(src.reps) : '');
         sets.push({
           weight,

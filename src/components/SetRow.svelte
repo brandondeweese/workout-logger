@@ -12,6 +12,9 @@
     onCheck,
     onRemove,
     onAutoStartRest,
+    // Unit for the load field. Box jumps progress by box height, not pounds,
+    // and the placeholder is the only thing on screen that says which.
+    loadUnit = 'lbs',
   } = $props();
 
   /** @param {string} t */
@@ -50,7 +53,7 @@
     </div>
   </div>
   <div class="field-wrap">
-    <input type="text" inputmode="decimal" placeholder="lbs" bind:value={weight} onchange={handleChange}>
+    <input type="text" inputmode="decimal" placeholder={loadUnit} bind:value={weight} onchange={handleChange}>
   </div>
   <div class="field-wrap reps-wrap">
     <input type="text" inputmode="numeric" placeholder="reps" bind:value={reps} onchange={handleChange}>

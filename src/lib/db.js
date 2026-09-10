@@ -7,6 +7,21 @@ export async function loadExercisesById(){
   return map;
 }
 
+// What the "weight" field of a set actually measures, per exercise. Lives on
+// the movement - a box jump is measured in inches whatever it is tagged with -
+// and defaults to pounds for everything that never says otherwise.
+export async function loadExerciseLoadMetrics(){
+  const [exRes, mvRes] = await Promise.all([
+    sb.from('exercises').select('id,movement_id'),
+    sb.from('movements').select('id,load_metric'),
+  ]);
+  const metricByMovement = {};
+  (mvRes.data || []).forEach(m => { metricByMovement[m.id] = m.load_metric || 'weight'; });
+  const map = {};
+  (exRes.data || []).forEach(x => { map[x.id] = metricByMovement[x.movement_id] || 'weight'; });
+  return map;
+}
+
 export async function loadExerciseBodyParts(){
   const [exRes, bpRes, mbpRes] = await Promise.all([
     sb.from('exercises').select('id,movement_id'),

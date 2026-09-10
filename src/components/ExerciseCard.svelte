@@ -90,6 +90,9 @@
   // shown here is exactly the number already in the field.
   const suggestion = $derived.by(() => {
     if(!lastSet || !lastSet.weight) return '';
+    // suggestWeight converts through estimated 1RM, which is meaningless on a
+    // box height. Report what was jumped last time and leave the call to him.
+    if(loadMetric !== 'weight') return `last ${lastSet.weight} in`;
     const lastW = parseFloat(lastSet.weight);
     const lastR = parseInt(lastSet.reps, 10);
     const s = suggestWeight(lastW, lastR, parseLeadingNumber(exercise.target), increment);
@@ -109,6 +112,13 @@
     const m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(exercise.name || '');
     return m ? { movement: m[1], equipment: m[2] } : { movement: exercise.name, equipment: null };
   });
+
+  // Most exercises load in pounds; a box jump progresses by box height. The
+  // movement decides, so a Box Jump reads in inches whatever equipment row it
+  // is tagged with. Anything not declaring otherwise stays pounds.
+  const loadMetric = $derived(appState.exerciseLoadMetric?.[exercise.exerciseId] || 'weight');
+  const loadUnit = $derived(loadMetric === 'height_in' ? 'in' : 'lbs');
+  const loadHeader = $derived(loadMetric === 'height_in' ? 'Height' : 'Lbs');
 
   const doneCount = $derived(exercise.sets.filter(s => s.checked).length);
   const totalCount = $derived(exercise.sets.length);
@@ -175,7 +185,7 @@
     <div class="ex-panel" class:active={activeTab === 'log'}>
       <div class="set-headers">
         <div class="sh sh-set">Set</div>
-        <div class="sh sh-field">Lbs</div>
+        <div class="sh sh-field">{loadHeader}</div>
         <div class="sh sh-field">Reps</div>
         <div class="sh sh-check"></div>
         <div class="sh sh-rm"></div>
@@ -183,6 +193,7 @@
       <div class="sets-list">
         {#each exercise.sets as set, setIdx (setIdx)}
           <SetRow
+            {loadUnit}
             bind:weight={exercise.sets[setIdx].weight}
             bind:reps={exercise.sets[setIdx].reps}
             tag={set.tag}
