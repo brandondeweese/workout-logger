@@ -321,6 +321,35 @@
   .prog-phase-tag{font-size:10.5px;color:var(--muted);opacity:0.7;}
   .prog-row .prog-sets{text-align:right;color:var(--text);}
   .prog-empty{font-size:13.5px;color:var(--muted);padding:6px 0;}
+  /*
+    The panel now spans every program the exercise appears in, so the list
+    needs to say which block each run of sessions belongs to. Older blocks are
+    dimmed rather than hidden - they're context for the current trend, not the
+    thing being read.
+  */
+  .prog-scope{
+    font-size:11.5px;color:var(--muted);opacity:0.75;
+    margin:2px 0 14px;line-height:1.35;
+  }
+  .prog-group-head{
+    display:flex;align-items:baseline;gap:8px;
+    margin:16px 0 2px;padding-bottom:5px;
+    border-bottom:1px solid var(--line);
+  }
+  .prog-group-head:first-of-type{margin-top:4px;}
+  .prog-group-name{
+    font-size:11px;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--muted);flex:1 1 auto;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .prog-group-head.current .prog-group-name{color:var(--text);}
+  .prog-current-badge{
+    font-size:10px;letter-spacing:0.4px;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent);
+    border-radius:999px;padding:1px 7px;flex:0 0 auto;
+  }
+  .prog-group-count{font-size:11.5px;color:var(--muted);flex:0 0 auto;}
+  .prog-row.dim{opacity:0.55;}
   .prog-chart{width:100%;height:auto;display:block;margin-bottom:6px;}
   .chart-axis-label{font-size:9px;fill:var(--muted);}
   .chart-empty{font-size:12.5px;color:var(--muted);padding:4px 0 10px;}

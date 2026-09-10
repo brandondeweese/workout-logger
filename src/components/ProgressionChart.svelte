@@ -7,7 +7,10 @@
   // pace needs "9:52", not a rounded 10. Omitted, values print as before.
   // `invert` flips the y-axis for metrics where lower is better (pace), so an
   // improving trend still reads as a line going up.
-  let { points = [], format = null, invert = false } = $props();
+  // `dividerIndex` rules a vertical line before that point - used to mark
+  // where the current program begins, so a trend inside the block is legible
+  // against the history leading into it.
+  let { points = [], format = null, invert = false, dividerIndex = null } = $props();
 
   const fmt = $derived(format ?? (v => Math.round(v)));
 
@@ -31,6 +34,13 @@
   }
 
   const pathD = $derived(points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(p.value).toFixed(1)}`).join(' '));
+  // Halfway between the last prior point and the first current one, so the
+  // line sits between the two eras rather than through a data point.
+  const dividerX = $derived(
+    dividerIndex != null && dividerIndex > 0 && dividerIndex < points.length
+      ? (xAt(dividerIndex - 1) + xAt(dividerIndex)) / 2
+      : null
+  );
   const latest = $derived(points.length ? points[points.length - 1] : null);
 </script>
 
@@ -40,6 +50,11 @@
   <svg viewBox="0 0 {W} {H}" class="prog-chart">
     <text x={padL} y={padT - 2} class="chart-axis-label">{fmt(invert ? minV : maxV)}</text>
     <text x={padL} y={padT + chartH + 11} class="chart-axis-label">{fmt(invert ? maxV : minV)}</text>
+    {#if dividerX != null}
+      <line x1={dividerX} y1={padT} x2={dividerX} y2={padT + chartH}
+            stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" />
+      <text x={dividerX + 3} y={padT + 8} class="chart-axis-label">this program</text>
+    {/if}
     <path d={pathD} fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
     {#each points as p, i}
       <circle cx={xAt(i)} cy={yAt(p.value)} r={i === points.length - 1 ? 4 : 2.5}
