@@ -1,4 +1,4 @@
-import { loadActiveProgram, loadExercisesById, loadExerciseBodyParts, loadExerciseLoadMetrics, loadLogs, migrateLegacyLocalLogsIfAny } from './db.js';
+import { loadActiveProgram, loadExercisesById, loadExerciseBodyParts, loadExerciseMetrics, loadLogs, migrateLegacyLocalLogsIfAny } from './db.js';
 
 // Shared reactive app state. Import `appState` (the container) and mutate its
 // properties - never destructure this export, or reactivity breaks (same
@@ -8,6 +8,7 @@ export const appState = $state({
   exercisesById: {},     // id -> display_name
   exerciseBodyParts: {}, // id -> body part name[], via the exercise's movement
   exerciseLoadMetric: {}, // id -> 'weight' | 'height_in', via the exercise's movement
+  exerciseRepMetric: {},  // id -> 'reps' | 'seconds' | 'feet', via the exercise's movement
   workoutLogs: [],        // all workout_logs rows, refreshed on program load / after save/delete
 });
 
@@ -18,7 +19,9 @@ export async function refreshWorkoutLogs(){
 export async function refreshActiveProgramState(){
   appState.exercisesById = await loadExercisesById();
   appState.exerciseBodyParts = await loadExerciseBodyParts();
-  appState.exerciseLoadMetric = await loadExerciseLoadMetrics();
+  const metrics = await loadExerciseMetrics();
+  appState.exerciseLoadMetric = metrics.load;
+  appState.exerciseRepMetric = metrics.rep;
   const program = await loadActiveProgram();
   // load workoutLogs BEFORE assigning activeProgram - LogWorkout's phase/day
   // defaulting effect only reacts to activeProgram's identity changing, so it

@@ -1,6 +1,9 @@
 <script>
+  import { onDestroy } from 'svelte';
   import MinusIcon from 'phosphor-svelte/lib/MinusIcon';
   import CheckIcon from 'phosphor-svelte/lib/CheckIcon';
+  import PlayIcon from 'phosphor-svelte/lib/PlayIcon';
+  import StopIcon from 'phosphor-svelte/lib/StopIcon';
   let {
     weight = $bindable(), reps = $bindable(),   // bound directly to the source array element
     tag, checked,
@@ -15,7 +18,48 @@
     // Unit for the load field. Box jumps progress by box height, not pounds,
     // and the placeholder is the only thing on screen that says which.
     loadUnit = 'lbs',
+    // What the second field counts. 'seconds' is a held set - a carry, a
+    // plank, a dead hang - which you time rather than count, so the field
+    // gets a stopwatch instead of a number you'd have to remember.
+    repUnit = 'reps',
   } = $props();
+
+  const timed = $derived(repUnit === 'seconds');
+
+  let running = $state(false);
+  let startedMs = 0;
+  let ticker = null;
+
+  function stopTicker(){
+    clearInterval(ticker);
+    ticker = null;
+  }
+
+  function toggleTimer(){
+    if(locked) return;
+    if(running){
+      stopTicker();
+      running = false;
+      // Whatever is in the field at the moment of stopping is the value; the
+      // tick below has been writing it all along, so there is nothing to
+      // reconcile. handleChange fires the same rest-timer start a typed
+      // value would.
+      handleChange();
+      return;
+    }
+    startedMs = Date.now();
+    reps = '0';
+    running = true;
+    // Sub-second so the display doesn't visibly lag the thumb, but the value
+    // written is always whole seconds.
+    ticker = setInterval(() => {
+      reps = String(Math.round((Date.now() - startedMs) / 1000));
+    }, 200);
+  }
+
+  // A set row is destroyed on save, on a phase/day switch, or when the exercise
+  // is swapped out. None of those should leave an interval running.
+  onDestroy(stopTicker);
 
   /** @param {string} t */
   function tagDisplay(t){
@@ -55,9 +99,16 @@
   <div class="field-wrap">
     <input type="text" inputmode="decimal" placeholder={loadUnit} bind:value={weight} onchange={handleChange}>
   </div>
-  <div class="field-wrap reps-wrap">
-    <input type="text" inputmode="numeric" placeholder="reps" bind:value={reps} onchange={handleChange}>
-    <span class="unit">reps</span>
+  <div class="field-wrap reps-wrap" class:timing={running}>
+    <input type="text" inputmode="numeric" placeholder={timed ? 'sec' : 'reps'} bind:value={reps} onchange={handleChange}>
+    {#if timed}
+      <button type="button" class="timer-btn" class:running={running} onclick={toggleTimer}
+              disabled={locked} aria-label={running ? 'Stop timing' : 'Start timing'}>
+        {#if running}<StopIcon size={13} weight="fill" />{:else}<PlayIcon size={13} weight="fill" />{/if}
+      </button>
+    {:else}
+      <span class="unit">reps</span>
+    {/if}
   </div>
   <button type="button" class="check-btn" class:checked={checked} onclick={onCheck} aria-label="Complete set"><CheckIcon size={17} weight="bold" /></button>
   <button type="button" class="remove-set-btn" onclick={onRemove} aria-label="Remove set"><MinusIcon size={14} /></button>

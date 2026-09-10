@@ -193,7 +193,11 @@
         // Non-pound metrics (box height) carry forward untouched - running a
         // height through an estimated-1RM conversion produces a number that
         // means nothing.
-        const scalable = (appState.exerciseLoadMetric?.[ex.exerciseId] || 'weight') === 'weight';
+        // Both fields have to mean what suggestWeight assumes: pounds against
+        // reps. A timed carry fails on the second count even though its load
+        // is honest pounds.
+        const scalable = (appState.exerciseLoadMetric?.[ex.exerciseId] || 'weight') === 'weight'
+          && (appState.exerciseRepMetric?.[ex.exerciseId] || 'reps') === 'reps';
         const suggested = (logged && !isWarmup && scalable) ? suggestWeight(w, r, goalReps, dayIncrement) : null;
         const weight = suggested != null ? String(suggested)
           : (src && src.weight != null ? String(src.weight) : '');

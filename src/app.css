@@ -405,6 +405,24 @@
     position:absolute;right:16px;top:50%;transform:translateY(-50%);
     font-size:13px;color:var(--muted);pointer-events:none;
   }
+  /*
+    Stopwatch for held sets - carries, planks, dead hangs. Sits where the
+    "reps" label sits on a counted set, so the row keeps its shape and the
+    field stays typeable: the timer writes into it, it does not replace it.
+    Unlike .unit it must take taps, so no pointer-events:none here.
+  */
+  .timer-btn{
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--line);border:none;color:var(--muted);
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:background .15s ease,color .15s ease;
+  }
+  .timer-btn.running{background:var(--accent);color:#0C0E12;}
+  .timer-btn:disabled{opacity:0.35;cursor:default;}
+  /* Ticking is the one thing in a set row that changes on its own - say so. */
+  .field-wrap.timing input{border-color:var(--accent);color:var(--accent);}
   .setrow input:focus{outline:none;border-color:var(--accent);}
 
   /*

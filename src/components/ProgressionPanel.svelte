@@ -63,6 +63,7 @@
   });
 
   const loadMetric = $derived(appState.exerciseLoadMetric?.[exerciseId] || 'weight');
+  const repMetric = $derived(appState.exerciseRepMetric?.[exerciseId] || 'reps');
 
   // Working sets only. Warmups and dropsets aren't the real effort, and every
   // logged set carries a tag, so nothing untagged leaks through.
@@ -91,6 +92,12 @@
   const metric = $derived.by(() => {
     if(!allSets.length) return null;
     if(loadMetric === 'height_in') return 'height';
+    // Held sets. Loaded ones (carries) progress by load or duration, so track
+    // the product; unloaded ones (dead hang, plank) have no load to multiply,
+    // so the seconds are the whole story.
+    if(repMetric === 'seconds'){
+      return allSets.every(s => s.w === 0) ? 'holdtime' : 'loadtime';
+    }
     if(allSets.every(s => s.w === 0)) return 'reps';
     const lowRepShare = allSets.filter(s => s.r <= 10).length / allSets.length;
     return lowRepShare >= 0.7 ? 'e1rm' : 'volume';
@@ -101,6 +108,8 @@
     : metric === 'volume' ? 'Volume load (lbs)'
     : metric === 'reps' ? 'Total reps'
     : metric === 'height' ? 'Best box height (in)'
+    : metric === 'loadtime' ? 'Load × time (lb·sec)'
+    : metric === 'holdtime' ? 'Time under tension (sec)'
     : ''
   );
 
@@ -109,6 +118,8 @@
     : metric === 'volume' ? 'weight × reps - trained too high-rep for a 1RM estimate to mean anything'
     : metric === 'reps' ? 'bodyweight movement, so reps are the load'
     : metric === 'height' ? 'tallest box cleared - height is the progression, not load'
+    : metric === 'loadtime' ? 'weight × seconds held - a carry gets harder by load or by duration'
+    : metric === 'holdtime' ? 'a bodyweight hold, so the seconds are the progression'
     : ''
   );
 
@@ -130,6 +141,10 @@
           value = sets.reduce((sum, s) => sum + s.w * s.r, 0);
         } else if(metric === 'height'){
           value = Math.max(...sets.map(s => s.w));
+        } else if(metric === 'loadtime'){
+          value = sets.reduce((sum, s) => sum + s.w * s.r, 0);
+        } else if(metric === 'holdtime'){
+          value = sets.reduce((sum, s) => sum + s.r, 0);
         } else {
           value = sets.reduce((sum, s) => sum + s.r, 0);
         }

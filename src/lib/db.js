@@ -7,19 +7,26 @@ export async function loadExercisesById(){
   return map;
 }
 
-// What the "weight" field of a set actually measures, per exercise. Lives on
-// the movement - a box jump is measured in inches whatever it is tagged with -
-// and defaults to pounds for everything that never says otherwise.
-export async function loadExerciseLoadMetrics(){
+// What each of a set's two fields actually measures, per exercise. Both live on
+// the movement - a box jump is inches and a carry is seconds whatever equipment
+// they're tagged with - and both default to the old behaviour (pounds, reps)
+// for everything that never says otherwise.
+export async function loadExerciseMetrics(){
   const [exRes, mvRes] = await Promise.all([
     sb.from('exercises').select('id,movement_id'),
-    sb.from('movements').select('id,load_metric'),
+    sb.from('movements').select('id,load_metric,rep_metric'),
   ]);
-  const metricByMovement = {};
-  (mvRes.data || []).forEach(m => { metricByMovement[m.id] = m.load_metric || 'weight'; });
-  const map = {};
-  (exRes.data || []).forEach(x => { map[x.id] = metricByMovement[x.movement_id] || 'weight'; });
-  return map;
+  const byMovement = {};
+  (mvRes.data || []).forEach(m => {
+    byMovement[m.id] = { load: m.load_metric || 'weight', rep: m.rep_metric || 'reps' };
+  });
+  const load = {}, rep = {};
+  (exRes.data || []).forEach(x => {
+    const m = byMovement[x.movement_id] || {};
+    load[x.id] = m.load || 'weight';
+    rep[x.id] = m.rep || 'reps';
+  });
+  return { load, rep };
 }
 
 export async function loadExerciseBodyParts(){

@@ -93,6 +93,7 @@
     // suggestWeight converts through estimated 1RM, which is meaningless on a
     // box height. Report what was jumped last time and leave the call to him.
     if(loadMetric !== 'weight') return `last ${lastSet.weight} in`;
+    if(repMetric !== 'reps') return `last ${lastSet.weight} \u00d7 ${lastSet.reps}${repUnit === 'sec' ? 's' : ' ' + repUnit}`;
     const lastW = parseFloat(lastSet.weight);
     const lastR = parseInt(lastSet.reps, 10);
     const s = suggestWeight(lastW, lastR, parseLeadingNumber(exercise.target), increment);
@@ -119,6 +120,11 @@
   const loadMetric = $derived(appState.exerciseLoadMetric?.[exercise.exerciseId] || 'weight');
   const loadUnit = $derived(loadMetric === 'height_in' ? 'in' : 'lbs');
   const loadHeader = $derived(loadMetric === 'height_in' ? 'Height' : 'Lbs');
+  // Carries, planks and dead hangs are held, not repped - the second field
+  // counts seconds and gets a stopwatch in SetRow.
+  const repMetric = $derived(appState.exerciseRepMetric?.[exercise.exerciseId] || 'reps');
+  const repUnit = $derived(repMetric === 'seconds' ? 'sec' : repMetric === 'feet' ? 'ft' : 'reps');
+  const repHeader = $derived(repMetric === 'seconds' ? 'Time' : repMetric === 'feet' ? 'Distance' : 'Reps');
 
   const doneCount = $derived(exercise.sets.filter(s => s.checked).length);
   const totalCount = $derived(exercise.sets.length);
@@ -186,7 +192,7 @@
       <div class="set-headers">
         <div class="sh sh-set">Set</div>
         <div class="sh sh-field">{loadHeader}</div>
-        <div class="sh sh-field">Reps</div>
+        <div class="sh sh-field">{repHeader}</div>
         <div class="sh sh-check"></div>
         <div class="sh sh-rm"></div>
       </div>
@@ -194,6 +200,7 @@
         {#each exercise.sets as set, setIdx (setIdx)}
           <SetRow
             {loadUnit}
+            repUnit={repMetric}
             bind:weight={exercise.sets[setIdx].weight}
             bind:reps={exercise.sets[setIdx].reps}
             tag={set.tag}
